@@ -266,7 +266,7 @@ class MultiThemeRetriever:
                     return merged
         return merged[: self.k]
 
-def get_retriever() -> Any:
+def get_retriever(selected_theme: Optional[str] = None) -> Any:
     """Tạo retriever để tìm kiếm các đoạn tài liệu liên quan."""
     global VECTORSTORES
     if not VECTORSTORES:
@@ -276,10 +276,19 @@ def get_retriever() -> Any:
 
     # Cấu hình tìm kiếm chuẩn cho Docs (Lấy k=4 hoặc 5 là đủ cho Docs)
     search_kwargs = {"k": 6, "fetch_k": 20, "lambda_mult": 0.8}
-    per_theme = {
-        tkey: vs.as_retriever(search_type="mmr", search_kwargs=search_kwargs)
-        for tkey, vs in VECTORSTORES.items()
-    }
+    if selected_theme:
+        if selected_theme not in VECTORSTORES:
+            raise ValueError(f"Theme '{selected_theme}' không tồn tại trong vectorstore.")
+        per_theme = {
+            selected_theme: VECTORSTORES[selected_theme].as_retriever(
+                search_type="mmr", search_kwargs=search_kwargs
+            )
+        }
+    else:
+        per_theme = {
+            tkey: vs.as_retriever(search_type="mmr", search_kwargs=search_kwargs)
+            for tkey, vs in VECTORSTORES.items()
+        }
     return MultiThemeRetriever(per_theme, k=search_kwargs["k"])
 
 def build_context(retrieved_docs: List[Document]) -> str:

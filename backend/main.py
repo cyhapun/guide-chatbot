@@ -55,7 +55,8 @@ class Message(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[Message]
-    model: str 
+    model: str
+    theme: str | None = None
     # Đã bỏ category vì Docs không phân chia ngành luật
 
 # --- HÀM TIỆN ÍCH ---
@@ -120,7 +121,7 @@ async def chat_endpoint(request: ChatRequest):
         chat_history_str = "\n\n".join(history_lines) if history_lines else "(Không có lịch sử trò chuyện)"
 
         # 3. Truy xuất tài liệu Docs liên quan
-        retriever = get_retriever()
+        retriever = get_retriever(request.theme)
         retrieved_docs = await retriever.ainvoke(last_message)
         
         # 4. Đóng gói dữ liệu (Context)

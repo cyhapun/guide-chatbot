@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, PanelLeft, BookOpenText } from 'lucide-react';
 import { ProviderSelector } from './ProviderSelector';
+import { ThemeSelector } from './ThemeSelector';
 import { ChatMessage, Message } from './ChatMessage';
 import { Sidebar, ChatSession } from './Sidebar';
 
@@ -14,6 +15,7 @@ export function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [model, setModel] = useState('google/gemma-4-31B-it');
+  const [theme, setTheme] = useState('docs-theme-sky-com__dcare');
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
@@ -113,7 +115,7 @@ export function ChatInterface() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, model }),
+        body: JSON.stringify({ messages: apiMessages, model, theme }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch response');
@@ -229,6 +231,7 @@ export function ChatInterface() {
               {/* Toolbar: Model (Nằm trên textarea) */}
               <div className="flex items-center gap-2 px-3 pt-3 pb-1 border-b border-gray-50 md:border-none">
                 <ProviderSelector model={model} setModel={setModel}/>
+                <ThemeSelector theme={theme} setTheme={setTheme} />
               </div>
 
               <textarea
