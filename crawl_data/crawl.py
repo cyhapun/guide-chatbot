@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from pathlib import Path
+from urllib.parse import urlparse
 
 def scrape_dcare_docs(url):
     headers = {
@@ -49,15 +50,36 @@ def scrape_dcare_docs(url):
         print(f"Có lỗi xảy ra: {e}")
         return []
 
-# Thực thi
-url = "https://docs.theme-sky.com/dcare/"
-scraped_data = scrape_dcare_docs(url)
+def url_to_filename(url: str) -> str:
+    """
+    Convert a URL into a stable filename (no query/fragment).
+    Example: https://docs.theme-sky.com/dcare/ -> docs-theme-sky-com__dcare.json
+    """
+    parsed = urlparse(url)
+    host = (parsed.hostname or "unknown-host").replace(".", "-")
+    path = (parsed.path or "/").strip("/")
+    path_part = path.replace("/", "__") if path else "root"
+    return f"{host}__{path_part}.json"
 
-# Lưu kết quả crawling vào raw (input cho RAG)
-out_path = Path(__file__).resolve().parents[1] / "backend" / "data" / "raw" / "dcare_docs.json"
-out_path.parent.mkdir(parents=True, exist_ok=True)
+# Thực thi: crawl nhiều URL (mỗi URL -> 1 file JSON trong backend/data/raw)
+URLS = [
+    "https://docs.theme-sky.com/dcare/",
+    # Thêm URL khác ở đây, ví dụ:
+    # "https://docs.theme-sky.com/other-theme/",
+]
 
-with open(out_path, 'w', encoding='utf-8') as f:
-    json.dump(scraped_data, f, ensure_ascii=False, indent=4)
+raw_dir = Path(__file__).resolve().parents[1] / "backend" / "data" / "raw"
+raw_dir.mkdir(parents=True, exist_ok=True)
 
-print(f"Đã cào thành công {len(scraped_data)} đoạn dữ liệu!")
+total_chunks = 0
+for url in URLS:
+    scraped_data = scrape_dcare_docs(url)
+    total_chunks += len(scraped_data)
+
+    out_path = raw_dir / url_to_filename(url)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(scraped_data, f, ensure_ascii=False, indent=4)
+
+    print(f"[OK] {url} -> {out_path.name} ({len(scraped_data)} chunks)")
+
+print(f"Đã cào thành công tổng cộng {total_chunks} đoạn dữ liệu từ {len(URLS)} URL.")
