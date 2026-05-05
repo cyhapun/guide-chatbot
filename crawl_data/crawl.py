@@ -64,8 +64,11 @@ def url_to_filename(url: str) -> str:
 # Thực thi: crawl nhiều URL (mỗi URL -> 1 file JSON trong backend/data/raw)
 URLS = [
     "https://docs.theme-sky.com/dcare/",
-    # Thêm URL khác ở đây, ví dụ:
-    # "https://docs.theme-sky.com/other-theme/",
+    'https://docs.theme-sky.com/wikibook/',
+    'https://docs.theme-sky.com/cozycorner/',
+    'https://docs.theme-sky.com/emall/',
+    'https://docs.theme-sky.com/merto/',
+    'https://docs.theme-sky.com/ecomall/',
 ]
 
 raw_dir = Path(__file__).resolve().parents[1] / "backend" / "data" / "raw"
