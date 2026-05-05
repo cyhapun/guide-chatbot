@@ -2,6 +2,7 @@ import os
 import json
 import glob
 import time
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -14,10 +15,15 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings
 load_dotenv()
 
 # --- CẤU HÌNH ĐƯỜNG DẪN ---
-# Cập nhật lại tên thư mục cho phù hợp với dự án mới
-FAISS_INDEX_PATH = "./dcare_faiss_index"
-JSON_DATA_PATH = "./data/dcare_docs" 
-TRACKING_FILE = "./embedded_files.json"
+# Dùng đường dẫn tuyệt đối theo thư mục backend để tránh phụ thuộc cwd khi chạy uvicorn
+BASE_DIR = Path(__file__).resolve().parent
+
+# Index/Tracking đặt trong backend/
+FAISS_INDEX_PATH = str(BASE_DIR / "dcare_faiss_index")
+TRACKING_FILE = str(BASE_DIR / "embedded_files.json")
+
+# Dữ liệu đã xử lý để embedding/RAG (vd: backend/data/processed/dcare_docs.json)
+JSON_DATA_PATH = str(BASE_DIR / "data" / "processed")
 
 # --- KIỂM TRA & KHỞI TẠO MODEL ---
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
@@ -84,6 +90,11 @@ def init_vector_db() -> None:
     # 2. Tìm các file JSON chưa được xử lý
     processed_files = get_processed_files()
     all_json_files = glob.glob(os.path.join(JSON_DATA_PATH, "*.json"))
+    if not all_json_files:
+        raise FileNotFoundError(
+            f"Không tìm thấy dữ liệu JSON để embedding tại: {JSON_DATA_PATH}. "
+            f"Hãy chạy script crawl để tạo file (vd: backend/data/processed/dcare_docs.json)."
+        )
     pending_files = [f for f in all_json_files if os.path.basename(f) not in processed_files]
     
     # Tải index cũ nếu đã có
@@ -96,6 +107,11 @@ def init_vector_db() -> None:
         )
     
     if not pending_files:
+        if vectorstore is None:
+            raise RuntimeError(
+                "Không có file JSON mới để embedding, nhưng cũng chưa tìm thấy FAISS index. "
+                "Hãy xoá embedded_files.json (nếu có) hoặc chạy lại embedding để tạo index."
+            )
         print(">> TẤT CẢ CÁC FILE ĐÃ ĐƯỢC EMBEDDING! Hệ thống sẵn sàng.")
         return
 
@@ -161,6 +177,8 @@ def get_retriever() -> Any:
     global vectorstore
     if vectorstore is None:
         init_vector_db()
+    if vectorstore is None:
+        raise RuntimeError("Vector DB chưa được khởi tạo (vectorstore=None). Vui lòng kiểm tra dữ liệu và FAISS index.")
 
     # Cấu hình tìm kiếm chuẩn cho Docs (Lấy k=4 hoặc 5 là đủ cho Docs)
     search_kwargs = {"k": 5, "fetch_k": 20, "lambda_mult": 0.8}

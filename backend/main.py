@@ -69,7 +69,7 @@ def get_llm(model_name: str) -> ChatHuggingFace:
         repo_id=model_name,
         task="text-generation",
         max_new_tokens=1500,
-        temperature=0.2, # Tăng nhẹ nhiệt độ so với luật để AI trả lời tự nhiên, thân thiện hơn
+        temperature=0.25, # Tăng nhẹ nhiệt độ so với luật để AI trả lời tự nhiên, thân thiện hơn
         huggingfacehub_api_token=hf_token,
         do_sample=True,
         repetition_penalty=1.1,
@@ -80,7 +80,7 @@ def get_llm(model_name: str) -> ChatHuggingFace:
 # --- CẤU TRÚC SYSTEM PROMPT DÀNH CHO DOCS ---
 prompt = ChatPromptTemplate.from_messages([
     ("system", """
-YOU ARE A HELPFUL TECHNICAL SUPPORT ASSISTANT FOR THE "DCARE" THEME.
+YOU ARE A HELPFUL TECHNICAL SUPPORT ASSISTANT FOR THE THEME.
 
 Your task is to answer user questions strictly based on the provided "Documentation Reference Data".
 
@@ -120,7 +120,6 @@ async def chat_endpoint(request: ChatRequest):
         chat_history_str = "\n\n".join(history_lines) if history_lines else "(Không có lịch sử trò chuyện)"
 
         # 3. Truy xuất tài liệu Docs liên quan
-        # Đã bỏ tham số category
         retriever = get_retriever()
         retrieved_docs = await retriever.ainvoke(last_message)
         

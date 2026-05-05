@@ -1,15 +1,12 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { User, Scale, BookOpen, ChevronRight } from 'lucide-react';
+import { User, Bot, BookOpenText, ExternalLink, ChevronDown } from 'lucide-react';
 
 export interface DocumentChunk {
   content: string;
   metadata: {
     source?: string;
-    dieu?: string;
-    khoan?: string;
-    diem?: string;
-    law?: string;
+    title?: string;
   };
 }
 
@@ -35,7 +32,7 @@ export function ChatMessage({ message }: { message: Message }) {
             </div>
           ) : (
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center shadow-md border border-blue-800">
-              <Scale className="w-4 h-4 text-white" />
+              <Bot className="w-4 h-4 text-white" />
             </div>
           )}
         </div>
@@ -56,32 +53,58 @@ export function ChatMessage({ message }: { message: Message }) {
             </div>
           </div>
           
-          {/* RAG Context Display (Căn cứ pháp lý) */}
+          {/* RAG Context Display (Documentation references) */}
           {!isUser && message.contextUsed && message.contextUsed.length > 0 && (
             <div className="mt-4 w-full max-w-3xl">
               <div className="flex items-center text-gray-500 mb-2 gap-1.5">
-                <BookOpen className="w-4 h-4 text-indigo-500" />
+                <BookOpenText className="w-4 h-4 text-indigo-500" />
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">
-                  Căn cứ pháp lý áp dụng
+                  Tài liệu tham khảo
                 </span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {message.contextUsed.map((ctx: any, idx) => {
-                  const { source, dieu, khoan, diem } = ctx.metadata || {};
-                  let displayText = source || 'Tài liệu pháp lý';
-                  if (dieu) displayText += ` - Điều ${dieu}`;
-                  if (khoan) displayText += ` (Khoản ${khoan})`;
-                  if (diem) displayText += ` Điểm ${diem}`;
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50/50 overflow-hidden">
+                {message.contextUsed.map((ctx, idx) => {
+                  const title = ctx?.metadata?.title?.trim() || `Tài liệu #${idx + 1}`;
+                  const source = ctx?.metadata?.source?.trim();
 
                   return (
-                    <div 
-                      key={idx} 
-                      className="group flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium bg-indigo-50/50 text-indigo-800 border border-indigo-100/50 hover:bg-indigo-100 hover:border-indigo-300 cursor-help transition-colors"
-                      title={ctx.content}
+                    <details
+                      key={`${title}-${idx}`}
+                      className="group border-b border-gray-200 last:border-b-0 bg-white/70 open:bg-white transition-colors"
                     >
-                      <ChevronRight className="w-3 h-3 text-indigo-400" />
-                      <span className="truncate max-w-[280px]">{displayText}</span>
-                    </div>
+                      <summary className="list-none cursor-pointer px-4 py-3 flex items-start gap-3 hover:bg-gray-50">
+                        <ChevronDown className="w-4 h-4 text-gray-400 mt-0.5 group-open:rotate-180 transition-transform" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-gray-900 truncate">
+                            {title}
+                          </div>
+                          {source ? (
+                            <a
+                              href={source}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-medium text-blue-600 hover:underline break-all"
+                              onClick={(e) => e.stopPropagation()}
+                              title={source}
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span className="truncate">{source}</span>
+                            </a>
+                          ) : (
+                            <div className="mt-0.5 text-[12px] text-gray-500">
+                              (Không có link nguồn)
+                            </div>
+                          )}
+                        </div>
+                      </summary>
+
+                      <div className="px-4 pb-4">
+                        <div className="text-[13px] leading-relaxed text-gray-700 whitespace-pre-wrap">
+                          {ctx.content}
+                        </div>
+                      </div>
+                    </details>
                   );
                 })}
               </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, Trash2, Gavel, PanelLeftClose } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, BookOpenText, PanelLeftClose } from 'lucide-react';
 
 export interface ChatSession {
   id: string;
@@ -25,9 +25,9 @@ export function Sidebar({ sessions, currentSessionId, onNewChat, onSelectSession
       <div className="h-14 flex items-center justify-between px-4 mt-2">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <Gavel className="w-4 h-4 text-white" />
+            <BookOpenText className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-bold text-white tracking-wide">VietLaw AI</span>
+          <span className="text-sm font-bold text-white tracking-wide">Theme Support</span>
         </div>
         <button
           onClick={onCloseSidebar}
@@ -52,7 +52,7 @@ export function Sidebar({ sessions, currentSessionId, onNewChat, onSelectSession
       {/* Danh sách Lịch sử Chat */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 custom-scrollbar">
         <div className="px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">
-          Lịch sử tra cứu
+          Lịch sử hỗ trợ
         </div>
         
         {sessions.length === 0 ? (
@@ -95,11 +95,11 @@ export function Sidebar({ sessions, currentSessionId, onNewChat, onSelectSession
       <div className="p-3 mt-auto border-t border-gray-800/50">
         <div className="flex items-center space-x-3 p-2 rounded-xl hover:bg-gray-900 transition-colors cursor-pointer">
           <div className="w-8 h-8 bg-gradient-to-tr from-gray-700 to-gray-600 rounded-full flex items-center justify-center">
-            <span className="text-xs font-bold text-white">VL</span>
+            <span className="text-xs font-bold text-white">TS</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-200 truncate">Luật sư / Cá nhân</p>
-            <p className="text-[11px] text-gray-500 truncate font-medium">Gói cơ bản</p>
+            <p className="text-sm font-medium text-gray-200 truncate">Kỹ thuật / Theme</p>
+            <p className="text-[11px] text-gray-500 truncate font-medium">Docs-guided</p>
           </div>
         </div>
       </div>
