@@ -7,23 +7,31 @@ interface ModelSelectorProps {
 }
 
 interface ModelOption {
-  id: string;
+  id: string; // Đã trả lại tiền tố PROVIDER: để backend của bạn dễ dàng parse().
   name: string;
   fullName: string;
   provider: 'GOOGLE' | 'OPENAI' | 'OPENROUTER' | 'HUGGINGFACE';
 }
 
 const MODELS: ModelOption[] = [
-  { id: 'GOOGLE:gemini-2.0-flash', name: 'Gemini Flash', fullName: 'gemini-2.0-flash', provider: 'GOOGLE' },
-  { id: 'GOOGLE:gemini-1.5-pro', name: 'Gemini Pro', fullName: 'gemini-1.5-pro', provider: 'GOOGLE' },
-  { id: 'OPENAI:gpt-4o-mini', name: 'GPT-4o Mini', fullName: 'gpt-4o-mini', provider: 'OPENAI' },
-  { id: 'OPENAI:gpt-4.1-mini', name: 'GPT-4.1 Mini', fullName: 'gpt-4.1-mini', provider: 'OPENAI' },
-  { id: 'OPENROUTER:openai/gpt-4o-mini', name: 'OR GPT-4o Mini', fullName: 'openai/gpt-4o-mini', provider: 'OPENROUTER' },
-  { id: 'OPENROUTER:anthropic/claude-3.5-sonnet', name: 'OR Claude 3.5', fullName: 'anthropic/claude-3.5-sonnet', provider: 'OPENROUTER' },
+  // ============ GOOGLE ============
+  { id: 'GOOGLE:gemini-2.5-flash', name: 'Gemini 2.5 Flash', fullName: 'gemini-2.5-flash', provider: 'GOOGLE' },
+  { id: 'GOOGLE:gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite', fullName: 'gemini-2.5-flash-lite', provider: 'GOOGLE' },
+  { id: 'GOOGLE:gemini-flash-latest', name: 'Gemini Flash Latest', fullName: 'gemini-flash-latest', provider: 'GOOGLE' },
+  
+  // ============ OPENAI ============
+  { id: 'OPENAI:gpt-5.5', name: 'GPT-5.5', fullName: 'gpt-5.5', provider: 'OPENAI' },
+  { id: 'OPENAI:gpt-5.4', name: 'GPT-5.4', fullName: 'gpt-5.4', provider: 'OPENAI' },
+  { id: 'OPENAI:gpt-5.4-mini', name: 'GPT-5.4 Mini', fullName: 'gpt-5.4-mini', provider: 'OPENAI' },
+  { id: 'OPENAI:gpt-5.4-nano', name: 'GPT-5.4 Nano', fullName: 'gpt-5.4-nano', provider: 'OPENAI' },
+  
+  // ============ OPENROUTER ============
+  { id: 'OPENROUTER:openrouter/free', name: 'OR Free Router', fullName: 'openrouter/free', provider: 'OPENROUTER' },
+
+  // ============ HUGGINGFACE ============
   { id: 'Qwen/Qwen3.5-9B', name: 'Qwen 3.5', fullName: 'Qwen3.5 9B', provider: 'HUGGINGFACE' },
   { id: 'google/gemma-4-31B-it', name: 'Gemma 4', fullName: 'Gemma 4 31B', provider: 'HUGGINGFACE' },
   { id: 'meta-llama/Llama-3.1-8B-Instruct', name: 'Llama 3.1', fullName: 'Llama 3.1 8B', provider: 'HUGGINGFACE' },
-  { id: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', name: 'DeepSeek R1', fullName: 'DeepSeek R1 7B', provider: 'HUGGINGFACE' },
 ];
 
 export function ProviderSelector({ model, setModel }: ModelSelectorProps) {
@@ -38,7 +46,6 @@ export function ProviderSelector({ model, setModel }: ModelSelectorProps) {
     HUGGINGFACE: MODELS.filter((m) => m.provider === 'HUGGINGFACE'),
   };
 
-  // Xử lý đóng menu khi click ra ngoài
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -63,7 +70,6 @@ export function ProviderSelector({ model, setModel }: ModelSelectorProps) {
         </div>
       </button>
 
-      {/* Menu thả xuống */}
       {isOpen && (
         <div className="absolute bottom-full mb-2 left-0 md:left-auto md:right-0 w-64 bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-xl py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-50 mb-1">

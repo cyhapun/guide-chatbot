@@ -17,6 +17,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
+from openai import AsyncOpenAI, BadRequestError
 
 # --- NẠP BIẾN MÔI TRƯỜNG ---
 current_dir = Path(__file__).resolve().parent
@@ -96,6 +97,22 @@ def get_llm(model_name: str) -> BaseChatModel:
     if not real_model:
         raise ValueError("Model không hợp lệ. Định dạng đúng: <PROVIDER>:<MODEL_ID>.")
 
+    if provider == "HUGGINGFACE":
+        hf_token = os.getenv("HUGGINGFACE_API_KEY")
+        if not hf_token:
+            raise ValueError("Không tìm thấy HUGGINGFACE_API_KEY. Vui lòng cấu hình trong file .env")
+        llm = HuggingFaceEndpoint(
+            repo_id=real_model,
+            task="text-generation",
+            max_new_tokens=1500,
+            temperature=temperature,
+            huggingfacehub_api_token=hf_token,
+            do_sample=True,
+            repetition_penalty=1.1,
+            timeout=300,
+        )
+        return ChatHuggingFace(llm=llm)
+
     if provider == "GOOGLE":
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -135,6 +152,65 @@ def get_llm(model_name: str) -> BaseChatModel:
         )
 
     raise ValueError(f"Provider '{provider}' chưa được hỗ trợ.")
+
+def parse_provider_and_model(model_name: str) -> tuple[str | None, str]:
+    """Tách provider/model từ định dạng <PROVIDER>:<MODEL_ID>."""
+    if ":" not in model_name:
+        return None, model_name
+
+    provider, real_model = model_name.split(":", 1)
+    provider = provider.strip().upper()
+    real_model = real_model.strip()
+    if not real_model:
+        raise ValueError("Model không hợp lệ. Định dạng đúng: <PROVIDER>:<MODEL_ID>.")
+    return provider, real_model
+
+async def generate_openrouter_response(
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float = 0.25,
+) -> str:
+    """
+    Gọi OpenRouter với payload tối giản để tránh lỗi routing:
+    - model: <provider>/<model>
+    - messages: [{role, content}, ...]
+    """
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("Không tìm thấy OPENROUTER_API_KEY trong file .env.")
+
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": os.getenv("APP_URL", "http://localhost:3000"),
+            "X-Title": "Theme Docs Chatbot",
+        },
+    )
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    try:
+        completion = await client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            messages=messages,
+        )
+    except BadRequestError as exc:
+        # Theo docs OpenRouter: dùng openrouter/free để router tự chọn model free hợp lệ.
+        error_message = str(exc)
+        if "model_not_supported" not in error_message:
+            raise
+        completion = await client.chat.completions.create(
+            model="openrouter/free",
+            temperature=temperature,
+            messages=messages,
+        )
+    return completion.choices[0].message.content or ""
 
 # --- CẤU TRÚC SYSTEM PROMPT DÀNH CHO DOCS ---
 prompt = ChatPromptTemplate.from_messages([
@@ -197,14 +273,28 @@ async def chat_endpoint(request: ChatRequest):
         # 5. Gọi LLM để sinh câu trả lời
         start_time = time.time()
         
-        llm = get_llm(request.model)
-        rag_chain = prompt | llm | StrOutputParser()
-
-        output_text = await rag_chain.ainvoke({
-            "context": context_text,
-            "chat_history_str": chat_history_str,
-            "question": last_message
-        })
+        provider, real_model = parse_provider_and_model(request.model)
+        if provider == "OPENROUTER":
+            rendered_messages = prompt.format_messages(
+                context=context_text,
+                chat_history_str=chat_history_str,
+                question=last_message,
+            )
+            system_prompt = rendered_messages[0].content
+            user_prompt = rendered_messages[-1].content
+            output_text = await generate_openrouter_response(
+                model=real_model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+            )
+        else:
+            llm = get_llm(request.model)
+            rag_chain = prompt | llm | StrOutputParser()
+            output_text = await rag_chain.ainvoke({
+                "context": context_text,
+                "chat_history_str": chat_history_str,
+                "question": last_message
+            })
 
         execution_time = time.time() - start_time
         print(f"⏱️ LLM Response Time: {execution_time:.2f}s")
