@@ -11,6 +11,9 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
+from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
@@ -60,23 +63,78 @@ class ChatRequest(BaseModel):
     # Đã bỏ category vì Docs không phân chia ngành luật
 
 # --- HÀM TIỆN ÍCH ---
-def get_llm(model_name: str) -> ChatHuggingFace:
-    """Khởi tạo kết nối với mô hình ngôn ngữ lớn (LLM) qua HuggingFace."""
-    hf_token = os.getenv("HUGGINGFACE_API_KEY")
-    if not hf_token:
-        raise ValueError("Không tìm thấy HUGGINGFACE_API_KEY. Vui lòng cấu hình trong file .env")
+def get_llm(model_name: str) -> BaseChatModel:
+    """
+    Hỗ trợ định dạng model: <PROVIDER>:<MODEL_ID>
+    - GOOGLE:gemini-2.0-flash
+    - OPENAI:gpt-4o-mini
+    - OPENROUTER:openai/gpt-4o-mini
+    """
+    temperature = 0.25
 
-    llm = HuggingFaceEndpoint(
-        repo_id=model_name,
-        task="text-generation",
-        max_new_tokens=1500,
-        temperature=0.25, # Tăng nhẹ nhiệt độ so với luật để AI trả lời tự nhiên, thân thiện hơn
-        huggingfacehub_api_token=hf_token,
-        do_sample=True,
-        repetition_penalty=1.1,
-        timeout=300,
-    )
-    return ChatHuggingFace(llm=llm)
+    if ":" not in model_name:
+        hf_token = os.getenv("HUGGINGFACE_API_KEY")
+        if not hf_token:
+            raise ValueError("Không tìm thấy HUGGINGFACE_API_KEY. Vui lòng cấu hình trong file .env")
+
+        llm = HuggingFaceEndpoint(
+            repo_id=model_name,
+            task="text-generation",
+            max_new_tokens=1500,
+            temperature=temperature,
+            huggingfacehub_api_token=hf_token,
+            do_sample=True,
+            repetition_penalty=1.1,
+            timeout=300,
+        )
+        return ChatHuggingFace(llm=llm)
+
+    provider, real_model = model_name.split(":", 1)
+    provider = provider.strip().upper()
+    real_model = real_model.strip()
+
+    if not real_model:
+        raise ValueError("Model không hợp lệ. Định dạng đúng: <PROVIDER>:<MODEL_ID>.")
+
+    if provider == "GOOGLE":
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("Không tìm thấy GOOGLE_API_KEY trong file .env.")
+        return ChatGoogleGenerativeAI(
+            model=real_model,
+            google_api_key=api_key,
+            temperature=temperature,
+            timeout=300,
+        )
+
+    if provider == "OPENAI":
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("Không tìm thấy OPENAI_API_KEY trong file .env.")
+        return ChatOpenAI(
+            model=real_model,
+            api_key=api_key,
+            temperature=temperature,
+            timeout=300,
+        )
+
+    if provider == "OPENROUTER":
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("Không tìm thấy OPENROUTER_API_KEY trong file .env.")
+        return ChatOpenAI(
+            model=real_model,
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=temperature,
+            timeout=300,
+            default_headers={
+                "HTTP-Referer": os.getenv("APP_URL", "http://localhost:3000"),
+                "X-Title": "Theme Docs Chatbot",
+            },
+        )
+
+    raise ValueError(f"Provider '{provider}' chưa được hỗ trợ.")
 
 # --- CẤU TRÚC SYSTEM PROMPT DÀNH CHO DOCS ---
 prompt = ChatPromptTemplate.from_messages([

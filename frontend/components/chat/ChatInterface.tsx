@@ -14,7 +14,7 @@ export function ChatInterface() {
   
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [model, setModel] = useState('google/gemma-4-31B-it');
+  const [model, setModel] = useState('GOOGLE:gemini-2.0-flash');
   const [theme, setTheme] = useState('docs-theme-sky-com__dcare');
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
