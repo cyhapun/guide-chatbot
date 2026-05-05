@@ -10,7 +10,7 @@ interface ModelOption {
   id: string;
   name: string;
   fullName: string;
-  provider: 'GOOGLE' | 'OPENAI' | 'OPENROUTER';
+  provider: 'GOOGLE' | 'OPENAI' | 'OPENROUTER' | 'HUGGINGFACE';
 }
 
 const MODELS: ModelOption[] = [
@@ -20,6 +20,10 @@ const MODELS: ModelOption[] = [
   { id: 'OPENAI:gpt-4.1-mini', name: 'GPT-4.1 Mini', fullName: 'gpt-4.1-mini', provider: 'OPENAI' },
   { id: 'OPENROUTER:openai/gpt-4o-mini', name: 'OR GPT-4o Mini', fullName: 'openai/gpt-4o-mini', provider: 'OPENROUTER' },
   { id: 'OPENROUTER:anthropic/claude-3.5-sonnet', name: 'OR Claude 3.5', fullName: 'anthropic/claude-3.5-sonnet', provider: 'OPENROUTER' },
+  { id: 'Qwen/Qwen3.5-9B', name: 'Qwen 3.5', fullName: 'Qwen3.5 9B', provider: 'HUGGINGFACE' },
+  { id: 'google/gemma-4-31B-it', name: 'Gemma 4', fullName: 'Gemma 4 31B', provider: 'HUGGINGFACE' },
+  { id: 'meta-llama/Llama-3.1-8B-Instruct', name: 'Llama 3.1', fullName: 'Llama 3.1 8B', provider: 'HUGGINGFACE' },
+  { id: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', name: 'DeepSeek R1', fullName: 'DeepSeek R1 7B', provider: 'HUGGINGFACE' },
 ];
 
 export function ProviderSelector({ model, setModel }: ModelSelectorProps) {
@@ -31,6 +35,7 @@ export function ProviderSelector({ model, setModel }: ModelSelectorProps) {
     GOOGLE: MODELS.filter((m) => m.provider === 'GOOGLE'),
     OPENAI: MODELS.filter((m) => m.provider === 'OPENAI'),
     OPENROUTER: MODELS.filter((m) => m.provider === 'OPENROUTER'),
+    HUGGINGFACE: MODELS.filter((m) => m.provider === 'HUGGINGFACE'),
   };
 
   // Xử lý đóng menu khi click ra ngoài
@@ -64,7 +69,7 @@ export function ProviderSelector({ model, setModel }: ModelSelectorProps) {
           <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-50 mb-1">
             Chọn mô hình AI
           </div>
-          {(['GOOGLE', 'OPENAI', 'OPENROUTER'] as const).map((provider) => (
+          {(['GOOGLE', 'OPENAI', 'OPENROUTER', 'HUGGINGFACE'] as const).map((provider) => (
             <div key={provider} className="py-1">
               <div className="px-3 pb-1 pt-1 text-[10px] font-bold tracking-wider text-gray-400">
                 {provider}
