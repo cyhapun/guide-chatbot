@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 /* Tùy chỉnh thanh cuộn cho class custom-scrollbar */
 .custom-scrollbar::-webkit-scrollbar {

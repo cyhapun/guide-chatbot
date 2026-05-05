@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { User, Bot, BookOpenText, ExternalLink, ChevronDown } from 'lucide-react';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 export interface DocumentChunk {
   content: string;
@@ -49,7 +52,12 @@ export function ChatMessage({ message }: { message: Message }) {
                 ? 'prose-p:leading-relaxed prose-p:text-white text-white' 
                 : 'prose-slate prose-p:leading-7 prose-headings:text-indigo-900 prose-a:text-blue-600 prose-strong:text-gray-900'
             }`}>
-              <ReactMarkdown>{message.content}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {message.content}
+              </ReactMarkdown>
             </div>
           </div>
           

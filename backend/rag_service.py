@@ -181,7 +181,7 @@ def get_retriever() -> Any:
         raise RuntimeError("Vector DB chưa được khởi tạo (vectorstore=None). Vui lòng kiểm tra dữ liệu và FAISS index.")
 
     # Cấu hình tìm kiếm chuẩn cho Docs (Lấy k=4 hoặc 5 là đủ cho Docs)
-    search_kwargs = {"k": 5, "fetch_k": 20, "lambda_mult": 0.8}
+    search_kwargs = {"k": 6, "fetch_k": 20, "lambda_mult": 0.8}
     
     return vectorstore.as_retriever(
         search_type="mmr", # Maximal Marginal Relevance giúp đa dạng hóa kết quả
