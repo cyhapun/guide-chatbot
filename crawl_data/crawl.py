@@ -53,8 +53,8 @@ def scrape_dcare_docs(url):
 url = "https://docs.theme-sky.com/dcare/"
 scraped_data = scrape_dcare_docs(url)
 
-# Lưu kết quả ra file JSON để nạp vào Vector Database
-out_path = Path(__file__).resolve().parents[1] / "backend" / "data" / "processed" / "dcare_docs.json"
+# Lưu kết quả crawling vào raw (input cho RAG)
+out_path = Path(__file__).resolve().parents[1] / "backend" / "data" / "raw" / "dcare_docs.json"
 out_path.parent.mkdir(parents=True, exist_ok=True)
 
 with open(out_path, 'w', encoding='utf-8') as f:

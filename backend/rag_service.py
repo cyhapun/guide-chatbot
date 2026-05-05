@@ -18,12 +18,20 @@ load_dotenv()
 # Dùng đường dẫn tuyệt đối theo thư mục backend để tránh phụ thuộc cwd khi chạy uvicorn
 BASE_DIR = Path(__file__).resolve().parent
 
-# Index/Tracking đặt trong backend/
-FAISS_INDEX_PATH = str(BASE_DIR / "dcare_faiss_index")
-TRACKING_FILE = str(BASE_DIR / "embedded_files.json")
+# Raw: dữ liệu crawling (input cho embedding/RAG)
+RAW_DIR = BASE_DIR / "data" / "raw"
+RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-# Dữ liệu đã xử lý để embedding/RAG (vd: backend/data/processed/dcare_docs.json)
-JSON_DATA_PATH = str(BASE_DIR / "data" / "processed")
+# Processed: artifact do hệ RAG tạo ra (index, tracking,...)
+PROCESSED_DIR = BASE_DIR / "data" / "processed"
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
+# Index/Tracking nằm trong processed/
+FAISS_INDEX_PATH = str(PROCESSED_DIR / "dcare_faiss_index")
+TRACKING_FILE = str(PROCESSED_DIR / "embedded_files.json")
+
+# Dữ liệu crawling để embedding/RAG (vd: backend/data/raw/dcare_docs.json)
+JSON_DATA_PATH = str(RAW_DIR)
 
 # --- KIỂM TRA & KHỞI TẠO MODEL ---
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
