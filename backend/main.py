@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -23,10 +23,11 @@ if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 
 # --- IMPORT TỪ RAG SERVICE ---
+# Đã đổi build_nested_context thành build_context
 from rag_service import (
     init_vector_db, 
     get_retriever, 
-    build_nested_context, 
+    build_context, 
     format_docs_for_frontend
 )
 
@@ -37,7 +38,7 @@ except Exception as e:
     print(f"Lỗi khởi tạo vector database: {e}")
 
 # --- KHỞI TẠO FASTAPI APP ---
-app = FastAPI(title="VietLaw RAG Backend - Nested Schema")
+app = FastAPI(title="Dcare Docs RAG Backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,7 +56,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
     model: str 
-    category: str = "Chung" # Bổ sung Category từ Frontend để lọc tài liệu tốt hơn
+    # Đã bỏ category vì Docs không phân chia ngành luật
 
 # --- HÀM TIỆN ÍCH ---
 def get_llm(model_name: str) -> ChatHuggingFace:
@@ -68,7 +69,7 @@ def get_llm(model_name: str) -> ChatHuggingFace:
         repo_id=model_name,
         task="text-generation",
         max_new_tokens=1500,
-        temperature=0.1, # Giữ nhiệt độ thấp để câu trả lời pháp lý được chính xác, không bay bổng
+        temperature=0.2, # Tăng nhẹ nhiệt độ so với luật để AI trả lời tự nhiên, thân thiện hơn
         huggingfacehub_api_token=hf_token,
         do_sample=True,
         repetition_penalty=1.1,
@@ -76,26 +77,25 @@ def get_llm(model_name: str) -> ChatHuggingFace:
     )
     return ChatHuggingFace(llm=llm)
 
-# --- CẤU TRÚC SYSTEM PROMPT ---
+# --- CẤU TRÚC SYSTEM PROMPT DÀNH CHO DOCS ---
 prompt = ChatPromptTemplate.from_messages([
     ("system", """
-YOU ARE A MULTI-DISCIPLINARY LEGAL EXPERT.
+YOU ARE A HELPFUL TECHNICAL SUPPORT ASSISTANT FOR THE "DCARE" THEME.
 
-Your task is to answer questions strictly based on the provided "Legal Reference Data Packages".
+Your task is to answer user questions strictly based on the provided "Documentation Reference Data".
 
 MANDATORY RULES:
-1. CLEAR CITATION: Always begin your answer by explicitly stating the Law name, Chapter, Article, and Clause.
-2. HANDLE CROSS-REFERENCES: When encountering the section "REFERENCES FOR THIS LEGAL BASIS", use its content to directly interpret and explain the corresponding terms in the clause.
-3. NO ASSUMPTION: Only answer based on the provided data. If the data does not sufficiently address the issue, respond with:
-   "Hiện tại tài liệu hệ thống cung cấp chưa đủ để giải đáp chi tiết vấn đề này".
-4. LANGUAGE: Always respond in professional and objective Vietnamese.
+1. CLEAR CITATION: Always reference the documentation title or provide the reference link when explaining a solution.
+2. NO ASSUMPTION: Only answer based on the provided data. If the data does not sufficiently address the issue, politely respond with:
+   "Hiện tại tài liệu hướng dẫn chưa đề cập chi tiết đến vấn đề này. Bạn có thể mở một ticket trên support center (trung tâm hỗ trợ) của Theme-Sky để được trợ giúp nhé."
+3. TONE & LANGUAGE: Always respond in a professional, friendly, and helpful tone in Vietnamese. Use markdown (bolding, lists) to make the steps easy to read.
 
 ====================
-[1] SYSTEM-EXTRACTED LEGAL REFERENCE DATA:
+[1] SYSTEM-EXTRACTED DOCUMENTATION REFERENCE DATA:
 {context}
 
 ====================
-[2] PREVIOUS CHAT HISTORY (Dùng để hiểu ngữ cảnh, KHÔNG dùng làm căn cứ pháp lý):
+[2] PREVIOUS CHAT HISTORY (For context only, not factual basis):
 {chat_history_str}
 """),
     ("human", """
@@ -111,7 +111,7 @@ async def chat_endpoint(request: ChatRequest):
         # 1. Tách câu hỏi cuối cùng
         last_message = request.messages[-1].content
         
-        # 2. Xử lý lịch sử chat thành văn bản rõ ràng (Dùng cho Log và LLM)
+        # 2. Xử lý lịch sử chat thành văn bản rõ ràng
         history_lines = []
         for msg in request.messages[:-1]:
             role_name = "🧑 USER" if msg.role == "user" else "🤖 AI"
@@ -119,35 +119,29 @@ async def chat_endpoint(request: ChatRequest):
             
         chat_history_str = "\n\n".join(history_lines) if history_lines else "(Không có lịch sử trò chuyện)"
 
-        # 3. Truy xuất tài liệu pháp lý liên quan
-        retriever = get_retriever(category=request.category)
+        # 3. Truy xuất tài liệu Docs liên quan
+        # Đã bỏ tham số category
+        retriever = get_retriever()
         retrieved_docs = await retriever.ainvoke(last_message)
         
         # 4. Đóng gói dữ liệu (Context)
-        context_text = build_nested_context(retrieved_docs)
+        # Sử dụng build_context thay cho build_nested_context
+        context_text = build_context(retrieved_docs)
         frontend_context = format_docs_for_frontend(retrieved_docs)
 
         # RENDER PROMPT & GHI LOG
-        # Sinh ra prompt hoàn chỉnh 
-        final_formatted_prompt = prompt.format(
-            context=context_text,
-            chat_history_str=chat_history_str, # Truyền chuỗi lịch sử vào đây
-            question=last_message
-        )
-
         print("\n" + "="*60)
         print(" CHUẨN BỊ FEED DATA CHO LLM (CONTEXT)")
         print("="*60)
         print(context_text)
         print("="*60 + "\n")
 
-        # 5. Gọi LLM để sinh câu trả lời và đo thời gian
+        # 5. Gọi LLM để sinh câu trả lời
         start_time = time.time()
         
         llm = get_llm(request.model)
         rag_chain = prompt | llm | StrOutputParser()
 
-        # Gọi ainvoke với các tham số đã cập nhật
         output_text = await rag_chain.ainvoke({
             "context": context_text,
             "chat_history_str": chat_history_str,
@@ -155,6 +149,7 @@ async def chat_endpoint(request: ChatRequest):
         })
 
         execution_time = time.time() - start_time
+        print(f"⏱️ LLM Response Time: {execution_time:.2f}s")
 
         return {
             "text": output_text,
