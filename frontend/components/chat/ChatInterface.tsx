@@ -184,7 +184,7 @@ export function ChatInterface() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, model, theme_code: activeThemeCode }),
+        body: JSON.stringify({ messages: apiMessages, model, theme_code: activeThemeCode, session_id: currentSessionId }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch response');

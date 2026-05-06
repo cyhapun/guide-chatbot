@@ -16,3 +16,5 @@ faiss-cpu
 huggingface_hub
 
 pypdf
+SQLAlchemy>=2.0
+mariadb

@@ -4,6 +4,7 @@ import traceback
 from pathlib import Path
 from typing import List
 import time
+import asyncio
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
@@ -43,11 +44,20 @@ from rag_service import (
     format_docs_for_frontend
 )
 
+# Database (conversation history)
+from db import init_db, get_or_create_conversation, add_message, get_last_message, get_history
+
 # Khởi tạo Vector DB ngay khi chạy server
 try:
     init_vector_db()
 except Exception as e:
     print(f"Lỗi khởi tạo vector database: {e}")
+
+# Khởi tạo database (bảng lưu lịch sử chat)
+try:
+    init_db()
+except Exception as e:
+    print(f"Lỗi khởi tạo database: {e}")
 
 # --- KHỞI TẠO FASTAPI APP ---
 app = FastAPI(title="Dcare Docs RAG Backend")
@@ -72,6 +82,8 @@ class ChatRequest(BaseModel):
     theme_code: str | None = None
     # Giữ để tương thích (nhưng backend sẽ không dùng cho quyền truy cập).
     theme: str | None = None
+    # Optional client-side session id (frontend sessions)
+    session_id: str | None = None
 
 
 # --- THEME CODE (DEMO) ---
@@ -296,6 +308,20 @@ async def chat_endpoint(request: ChatRequest):
         if not resolved_theme:
             raise HTTPException(status_code=403, detail="Invalid theme_code")
 
+        # 3.5. Khởi tạo / lấy conversation trong DB (nếu frontend gửi session_id)
+        conv = None
+        try:
+            conv = await asyncio.to_thread(get_or_create_conversation, request.session_id, resolved_theme, request.model)
+            # Lưu message của user (tránh trùng lặp với message đã lưu gần nhất)
+            try:
+                last_db_msg = await asyncio.to_thread(get_last_message, conv.id)
+                if not (last_db_msg and last_db_msg.role == 'user' and last_db_msg.content == last_message):
+                    await asyncio.to_thread(add_message, conv.id, 'user', last_message)
+            except Exception as exc:
+                print(f"DB warning (save user message): {exc}")
+        except Exception as exc:
+            print(f"DB warning (get/create conversation): {exc}")
+
         # 4. Truy xuất tài liệu Docs liên quan
         retriever = get_retriever(resolved_theme)
         retrieved_docs = await retriever.ainvoke(last_message)
@@ -341,9 +367,17 @@ async def chat_endpoint(request: ChatRequest):
         execution_time = time.time() - start_time
         print(f"⏱️ LLM Response Time: {execution_time:.2f}s")
 
+        # Persist assistant response to DB (best-effort)
+        if conv:
+            try:
+                await asyncio.to_thread(add_message, conv.id, 'assistant', output_text)
+            except Exception as exc:
+                print(f"DB warning (save assistant message): {exc}")
+
         return {
             "text": output_text,
-            "contextUsed": frontend_context
+            "contextUsed": frontend_context,
+            "conversationId": conv.id if conv else None
         }
 
     except Exception as e:
