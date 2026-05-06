@@ -71,7 +71,7 @@ def get_llm(model_name: str) -> BaseChatModel:
     - OPENAI:gpt-4o-mini
     - OPENROUTER:openai/gpt-4o-mini
     """
-    temperature = 0.25
+    temperature = 0.26
 
     if ":" not in model_name:
         hf_token = os.getenv("HUGGINGFACE_API_KEY")

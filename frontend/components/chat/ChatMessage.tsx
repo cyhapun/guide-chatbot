@@ -1,9 +1,35 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import { User, Bot, BookOpenText, ExternalLink, ChevronDown } from 'lucide-react';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+
+function MarkdownImage({
+  src,
+  alt,
+  className,
+  ...rest
+}: React.ImgHTMLAttributes<HTMLImageElement>) {
+  if (src == null || typeof src !== 'string' || src === '') return null;
+  return (
+    // Remote RAG URLs are arbitrary domains; use native <img> (not next/image).
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      {...rest}
+      src={src}
+      alt={alt ?? ''}
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+      className={`my-3 block max-h-[min(85vh,48rem)] w-auto max-w-full shrink-0 rounded-lg border border-gray-200 bg-white object-contain opacity-100 [image-rendering:auto] [transform:translateZ(0)] [backface-visibility:hidden] ${className ?? ''}`}
+    />
+  );
+}
+
+const markdownComponents: Components = {
+  img: MarkdownImage,
+};
 
 export interface DocumentChunk {
   content: string;
@@ -49,12 +75,13 @@ export function ChatMessage({ message }: { message: Message }) {
           }`}>
             <div className={`prose max-w-none ${
               isUser 
-                ? 'prose-p:leading-relaxed prose-p:text-white text-white' 
+                ? 'prose-p:leading-relaxed prose-p:text-white text-white prose-img:border-white/20' 
                 : 'prose-slate prose-p:leading-7 prose-headings:text-indigo-900 prose-a:text-blue-600 prose-strong:text-gray-900'
             }`}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
+                components={markdownComponents}
               >
                 {message.content}
               </ReactMarkdown>
