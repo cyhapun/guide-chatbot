@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, PanelLeft, BookOpenText } from 'lucide-react';
 import { ProviderSelector } from './ProviderSelector';
-import { ThemeSelector } from './ThemeSelector';
+import { THEMES } from './ThemeSelector';
 import { ChatMessage, Message } from './ChatMessage';
 import { Sidebar, ChatSession } from './Sidebar';
 
@@ -15,7 +15,10 @@ export function ChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [model, setModel] = useState('GOOGLE:gemini-2.5-flash');
-  const [theme, setTheme] = useState('docs-theme-sky-com__dcare');
+  const [theme, setTheme] = useState('');
+  const [isThemeUnlocked, setIsThemeUnlocked] = useState(false);
+  const [themeCode, setThemeCode] = useState('');
+  const [themeCodeError, setThemeCodeError] = useState<string | null>(null);
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
@@ -37,6 +40,15 @@ export function ChatInterface() {
     setIsMounted(true);
     const savedSessions = localStorage.getItem('theme_docs_sessions');
     const savedMessages = localStorage.getItem('theme_docs_messages');
+    const savedThemeCode = localStorage.getItem('theme_docs_theme_code');
+    if (savedThemeCode) {
+      const normalized = savedThemeCode.trim();
+      const matched = THEMES.find((t) => t.id === normalized);
+      if (matched) {
+        setTheme(matched.id);
+        setIsThemeUnlocked(true);
+      }
+    }
 
     if (savedSessions && savedMessages) {
       const parsedSessions = JSON.parse(savedSessions);
@@ -48,6 +60,28 @@ export function ChatInterface() {
       handleNewChat();
     }
   }, []);
+
+  const selectedTheme = THEMES.find((t) => t.id === theme);
+
+  const handleUnlockTheme = () => {
+    const normalized = themeCode.trim();
+    if (!normalized) {
+      setThemeCodeError('Vui lòng nhập mã theme');
+      return;
+    }
+
+    const matched = THEMES.find((t) => t.id === normalized);
+    if (!matched) {
+      setThemeCodeError('Mã theme không hợp lệ');
+      return;
+    }
+
+    setTheme(matched.id);
+    setIsThemeUnlocked(true);
+    setThemeCodeError(null);
+    setThemeCode('');
+    localStorage.setItem('theme_docs_theme_code', matched.id);
+  };
 
   useEffect(() => {
     if (isMounted) {
@@ -89,6 +123,7 @@ export function ChatInterface() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!isThemeUnlocked) return;
     if (!input.trim() || isLoading || !currentSessionId) return;
 
     const userText = input.trim();
@@ -152,6 +187,75 @@ export function ChatInterface() {
             <div className="w-12 h-12 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
           </div>
           <span className="text-gray-500 font-medium text-sm animate-pulse">Khởi tạo hệ thống...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isThemeUnlocked) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center px-4">
+        <div className="w-full max-w-lg rounded-3xl border border-gray-200 bg-white shadow-xl p-6">
+          <div className="flex items-start gap-3">
+            <div className="w-11 h-11 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100">
+              <BookOpenText className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-bold text-gray-900">Nhập mã Theme để mở chatbot</h2>
+              <p className="text-gray-500 mt-1 text-sm">
+                Mã theme phải khớp với một trong các mã hỗ trợ dưới đây.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <label className="text-sm font-medium text-gray-700">Theme code</label>
+            <input
+              value={themeCode}
+              onChange={(e) => {
+                setThemeCode(e.target.value);
+                setThemeCodeError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleUnlockTheme();
+              }}
+              placeholder="Ví dụ: docs-theme-sky-com__dcare"
+              className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/60"
+            />
+
+            {themeCodeError && (
+              <div className="mt-2 text-sm text-red-600 font-medium">{themeCodeError}</div>
+            )}
+
+            <button
+              onClick={handleUnlockTheme}
+              className="mt-4 w-full p-3 rounded-2xl text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 transition-all shadow-md active:scale-95"
+            >
+              Mở chatbot
+            </button>
+
+            <div className="mt-4">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+                Mã theme hỗ trợ
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      setThemeCode(t.id);
+                      setThemeCodeError(null);
+                    }}
+                    className="px-3 py-1.5 rounded-full border border-gray-200 text-[12px] text-gray-700 hover:bg-gray-50 transition-colors"
+                    title={t.fullName}
+                  >
+                    {t.id}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -231,7 +335,19 @@ export function ChatInterface() {
               {/* Toolbar: Model (Nằm trên textarea) */}
               <div className="flex items-center gap-2 px-3 pt-3 pb-1 border-b border-gray-50 md:border-none">
                 <ProviderSelector model={model} setModel={setModel}/>
-                <ThemeSelector theme={theme} setTheme={setTheme} />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50">
+                  <div className="w-6 h-6 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 rounded-full bg-violet-600" />
+                  </div>
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-[12px] font-bold text-gray-800">
+                      {selectedTheme?.name ?? 'Theme'}
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-500 truncate max-w-[10rem]">
+                      {theme}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <textarea

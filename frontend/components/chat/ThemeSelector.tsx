@@ -12,7 +12,7 @@ interface ThemeSelectorProps {
   setTheme: (theme: string) => void;
 }
 
-const THEMES: ThemeOption[] = [
+export const THEMES: ThemeOption[] = [
   { id: 'docs-theme-sky-com__dcare', name: 'Dcare', fullName: 'Theme Dcare' },
   { id: 'docs-theme-sky-com__cozycorner', name: 'Cozycorner', fullName: 'Theme Cozycorner' },
   { id: 'docs-theme-sky-com__ecomall', name: 'Ecomall', fullName: 'Theme Ecomall' },
