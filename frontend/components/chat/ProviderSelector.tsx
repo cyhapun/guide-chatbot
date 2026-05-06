@@ -7,7 +7,7 @@ interface ModelSelectorProps {
 }
 
 interface ModelOption {
-  id: string; // Đã trả lại tiền tố PROVIDER: để backend của bạn dễ dàng parse().
+  id: string; 
   name: string;
   fullName: string;
   provider: 'GOOGLE' | 'OPENAI' | 'OPENROUTER' | 'HUGGINGFACE';
