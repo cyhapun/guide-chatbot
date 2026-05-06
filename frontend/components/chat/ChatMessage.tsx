@@ -101,7 +101,28 @@ export function ChatMessage({ message }: { message: Message }) {
               <div className="rounded-2xl border border-gray-200 bg-gray-50/50 overflow-hidden">
                 {message.contextUsed.map((ctx, idx) => {
                   const title = ctx?.metadata?.title?.trim() || `Document #${idx + 1}`;
-                  const source = ctx?.metadata?.source?.trim();
+                  const rawSource = ctx?.metadata?.source?.trim();
+
+                  const displaySource = (() => {
+                    if (!rawSource) return null;
+                    try {
+                      const u = new URL(rawSource);
+                      const parts = u.pathname.split('/').filter(Boolean);
+                      if (parts.length > 0 && parts[parts.length - 1].toLowerCase().endsWith('.json')) {
+                        const parent = parts.slice(0, -1).join('/');
+                        return `${u.origin}${parent ? '/' + parent : ''}`;
+                      }
+                      return `${u.origin}${u.pathname}`;
+                    } catch (err) {
+                      // Not a valid URL (maybe local path). Strip trailing .json filename if present
+                      const s = rawSource.replace(/\\\\/g, '/').replace(/\\/g, '/');
+                      const parts = s.split('/').filter(Boolean);
+                      if (parts.length > 0 && parts[parts.length - 1].toLowerCase().endsWith('.json')) {
+                        return parts.slice(0, -1).join('/') || parts[0] || '';
+                      }
+                      return rawSource;
+                    }
+                  })();
 
                   return (
                     <details
@@ -114,17 +135,17 @@ export function ChatMessage({ message }: { message: Message }) {
                           <div className="text-sm font-semibold text-gray-900 truncate">
                             {title}
                           </div>
-                          {source ? (
+                          {rawSource ? (
                             <a
-                              href={source}
+                              href={rawSource}
                               target="_blank"
                               rel="noreferrer"
                               className="mt-0.5 inline-flex items-center gap-1 text-[12px] font-medium text-blue-600 hover:underline break-all"
                               onClick={(e) => e.stopPropagation()}
-                              title={source}
+                              title={rawSource}
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
-                              <span className="truncate">{source}</span>
+                              <span className="truncate">{displaySource || 'Open documentation'}</span>
                             </a>
                           ) : (
                             <div className="mt-0.5 text-[12px] text-gray-500">

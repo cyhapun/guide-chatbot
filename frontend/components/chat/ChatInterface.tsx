@@ -356,11 +356,8 @@ export function ChatInterface() {
                     <div className="w-2.5 h-2.5 rounded-full bg-violet-600" />
                   </div>
                   <div className="flex flex-col leading-tight">
-                    <span className="text-[12px] font-bold text-gray-800">
-                      {selectedTheme?.name ?? 'Theme'}
-                    </span>
-                    <span className="text-[10px] font-medium text-gray-500 truncate max-w-[10rem]">
-                      {theme}
+                    <span className="text-[13px] font-bold text-gray-800">
+                      {selectedTheme?.fullName ?? selectedTheme?.name ?? 'Theme'}
                     </span>
                   </div>
                 </div>
