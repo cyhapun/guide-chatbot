@@ -99,7 +99,7 @@ export function ChatInterface() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.detail || 'Mã theme không hợp lệ');
+        throw new Error(errorData?.details || errorData?.detail || 'Mã theme không hợp lệ');
       }
 
       const data = await response.json();

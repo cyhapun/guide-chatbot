@@ -1,4 +1,5 @@
 import os
+import sys
 import traceback
 from pathlib import Path
 from typing import List
@@ -18,6 +19,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
 from openai import AsyncOpenAI, BadRequestError
+
+# Ensure console output uses UTF-8 (avoids UnicodeEncodeError on Windows cp1252).
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 
 # --- NẠP BIẾN MÔI TRƯỜNG ---
 current_dir = Path(__file__).resolve().parent
@@ -64,13 +72,9 @@ class ChatRequest(BaseModel):
     theme_code: str | None = None
     # Giữ để tương thích (nhưng backend sẽ không dùng cho quyền truy cập).
     theme: str | None = None
-    # Đã bỏ category vì Docs không phân chia ngành luật
 
 
 # --- THEME CODE (DEMO) ---
-# Giả lập cơ chế “mã kích hoạt theo theme”.
-# Khi demo xong, bạn nên chuyển các giá trị này sang biến môi trường hoặc file cấu hình riêng
-# để giảm rủi ro lộ mã trong repo.
 THEME_CODE_MAP: dict[str, str] = {
     # docs-theme-sky-com__dcare
     "DEMO-DCARE-4F2A9C1B": "docs-theme-sky-com__dcare",
@@ -287,7 +291,7 @@ async def chat_endpoint(request: ChatRequest):
         if not request.theme_code:
             raise HTTPException(status_code=403, detail="Missing theme_code")
 
-        normalized_code = request.theme_code.strip()
+        normalized_code = request.theme_code.strip().upper()
         resolved_theme = THEME_CODE_MAP.get(normalized_code)
         if not resolved_theme:
             raise HTTPException(status_code=403, detail="Invalid theme_code")
@@ -350,7 +354,7 @@ async def chat_endpoint(request: ChatRequest):
 @app.post("/theme/unlock")
 async def theme_unlock_endpoint(request: ThemeUnlockRequest):
     try:
-        normalized_code = request.theme_code.strip()
+        normalized_code = request.theme_code.strip().upper()
         resolved_theme = THEME_CODE_MAP.get(normalized_code)
         if not resolved_theme:
             raise HTTPException(status_code=403, detail="Invalid theme_code")

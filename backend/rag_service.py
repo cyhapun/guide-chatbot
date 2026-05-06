@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import glob
 import time
@@ -11,6 +12,13 @@ from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
+
+# Ensure console stdout/stderr can always encode UTF-8 logs (Windows default may be cp1252).
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 
 # Tải các biến môi trường (như API keys) từ file .env
 load_dotenv()
@@ -50,7 +58,7 @@ HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 if not HF_TOKEN:
     raise ValueError("Không tìm thấy HUGGINGFACE_API_KEY. Vui lòng kiểm tra lại file .env của bạn nhé.")
 
-print("Đang kết nối mô hình BAAI/bge-m3 qua Hugging Face API...")
+print("Dang ket noi mo hinh BAAI/bge-m3 qua Hugging Face API...")
 embeddings = HuggingFaceEndpointEmbeddings(
     model="BAAI/bge-m3",
     task="feature-extraction",
@@ -67,7 +75,7 @@ def load_knowledge_base_to_ram() -> None:
     global KNOWLEDGE_BASE
     json_files = glob.glob(os.path.join(JSON_DATA_PATH, "*.json"))
     
-    print(f"Đang nạp {len(json_files)} file JSON vào bộ nhớ...")
+    print(f"Dang nap {len(json_files)} file JSON vao bo nho...")
     
     for file_path in json_files:
         tkey = theme_key_from_path(file_path)
@@ -156,7 +164,7 @@ def init_vector_db() -> None:
         # Load index if exists
         if os.path.exists(index_path):
             if tkey not in VECTORSTORES:
-                print(f"Đang tải FAISS Index cho theme '{tkey}' từ ổ cứng...")
+                print(f"Dang tai FAISS Index cho theme '{tkey}' tu o cung...")
                 VECTORSTORES[tkey] = FAISS.load_local(
                     index_path,
                     embeddings,
@@ -168,7 +176,7 @@ def init_vector_db() -> None:
             pending_tasks.append((tkey, file_path))
 
     if not pending_tasks and VECTORSTORES:
-        print(">> TẤT CẢ CÁC THEME ĐÃ ĐƯỢC EMBEDDING! Hệ thống sẵn sàng.")
+        print(">> TAT CA CAC THEME DA DUOC EMBEDDING! He thong san sang.")
         return
     if not pending_tasks and not VECTORSTORES:
         raise RuntimeError(
@@ -185,7 +193,7 @@ def init_vector_db() -> None:
         filename = os.path.basename(file_to_process)
 
         print("=" * 50)
-        print(f" BẮT ĐẦU EMBEDDING THEME: {tkey} | FILE: {filename}")
+        print(f" BAT DAU EMBEDDING THEME: {tkey} | FILE: {filename}")
         print("=" * 50)
 
         splits: List[Document] = []
@@ -211,7 +219,7 @@ def init_vector_db() -> None:
 
         for i in range(0, len(splits), BATCH_SIZE):
             batch = splits[i : i + BATCH_SIZE]
-            print(f"  + Đang đẩy lên HuggingFace batch {i} đến {i + len(batch)}...")
+            print(f"  + Dang day len HuggingFace batch {i} den {i + len(batch)}...")
 
             for attempt in range(MAX_RETRIES):
                 try:
@@ -227,19 +235,19 @@ def init_vector_db() -> None:
 
                 except Exception as e:
                     print(
-                        f"    -> [Cảnh báo] Lỗi kết nối ở lần thử {attempt + 1}/{MAX_RETRIES}: {str(e)[:100]}..."
+                        f"    -> [Warning] Loi ket noi o lan thu {attempt + 1}/{MAX_RETRIES}: {str(e)[:100]}..."
                     )
                     if attempt < MAX_RETRIES - 1:
                         wait_time = 15 * (attempt + 1)
-                        print(f"    -> Đang tạm nghỉ {wait_time} giây để máy chủ phục hồi...")
+                        print(f"    -> Dang tam nghi {wait_time} giay de may chu phuc hoi...")
                         time.sleep(wait_time)
                     else:
-                        print(f"\n[X] THẤT BẠI TẠI BATCH {i} SAU {MAX_RETRIES} LẦN THỬ.")
+                        print(f"\n[X] THAT BAI TAI BATCH {i} SAU {MAX_RETRIES} LAN THU.")
                         raise e
 
         VECTORSTORES[tkey].save_local(theme_faiss_index_path(tkey))
         mark_file_as_processed(tkey, filename)
-        print(f">> ĐÃ HOÀN THÀNH VÀ LƯU INDEX THEME: {tkey} | FILE: {filename}")
+        print(f">> DA HOAN THANH VA LUU INDEX THEME: {tkey} | FILE: {filename}")
 
 class MultiThemeRetriever:
     def __init__(self, retrievers: Dict[str, Any], k: int):
