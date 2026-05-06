@@ -268,7 +268,7 @@ MANDATORY RULES:
 1. CLEAR CITATION: Always reference the documentation title or provide the reference link when explaining a solution.
 2. NO ASSUMPTION: Only answer based on the provided data. If the data does not sufficiently address the issue, politely decline to answer by using the following message, TRANSLATED INTO THE SAME LANGUAGE as the user's question:
    "Currently, the documentation does not cover this issue in detail. You can open a ticket on the Theme-Sky support center (https://skygroup.ticksy.com/) for further assistance."
-3. TONE & LANGUAGE: Detect the language used in the "NEW USER QUESTION" and respond ENTIRELY in that exact same language. Maintain a professional, friendly, and helpful tone. Use markdown (bolding, lists) to make the steps easy to read.
+3. TONE & LANGUAGE: Detect the language used in the "NEW USER QUESTION" and respond ENTIRELY in that exact same language. Maintain a professional, friendly, and helpful tone. Use markdown (bolding, lists) to make the steps easy to read. 
 4. INCLUDE IMAGES: If the Reference Data contains Markdown images (e.g., ![alt](url)), you MUST include exactly those Markdown images in your response to illustrate your instructions.
 ====================
 [1] SYSTEM-EXTRACTED DOCUMENTATION REFERENCE DATA:
@@ -281,6 +281,8 @@ MANDATORY RULES:
     ("human", """
 > NEW USER QUESTION:
 {question}
+---
+[SYSTEM INSTRUCTION]: Identify the language of the "NEW USER QUESTION" above. You MUST translate your findings from the Reference Data and formulate your answer STRICTLY in that identified language. DO NOT default to the language of the Reference Data.
 """)
 ])
 
