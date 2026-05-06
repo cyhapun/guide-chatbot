@@ -18,7 +18,6 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.messages import HumanMessage, AIMessage
 from openai import AsyncOpenAI, BadRequestError
 
 # Ensure console output uses UTF-8 (avoids UnicodeEncodeError on Windows cp1252).
@@ -141,7 +140,7 @@ def get_llm(model_name: str) -> BaseChatModel:
             huggingfacehub_api_token=hf_token,
             do_sample=True,
             repetition_penalty=1.1,
-            timeout=300,
+            timeout=100,
         )
         return ChatHuggingFace(llm=llm)
 
@@ -155,7 +154,7 @@ def get_llm(model_name: str) -> BaseChatModel:
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=temperature,
-            timeout=300,
+            timeout=100,
             default_headers={
                 "HTTP-Referer": os.getenv("APP_URL", "http://localhost:3000"),
                 "X-Title": "Theme Docs Chatbot",
@@ -171,7 +170,7 @@ def get_llm(model_name: str) -> BaseChatModel:
             model=model_id,
             api_key=api_key,
             temperature=temperature,
-            timeout=300,
+            timeout=100,
         )
 
     # Helper: try Google
@@ -183,7 +182,7 @@ def get_llm(model_name: str) -> BaseChatModel:
             model=model_id,
             google_api_key=api_key,
             temperature=temperature,
-            timeout=300,
+            timeout=100,
         )
 
     # If no provider prefix: try HF -> OpenRouter -> OpenAI -> Google

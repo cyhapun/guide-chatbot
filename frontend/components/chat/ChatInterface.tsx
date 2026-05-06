@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, PanelLeft, BookOpenText } from 'lucide-react';
-import { ProviderSelector } from './ProviderSelector';
+// Provider selector removed to enforce default provider fallback
 import { THEMES } from './ThemeSelector';
 import { ChatMessage, Message } from './ChatMessage';
 import { Sidebar, ChatSession } from './Sidebar';
@@ -14,7 +14,6 @@ export function ChatInterface() {
   
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [model, setModel] = useState('google/gemma-4-31B-it');
   const [theme, setTheme] = useState('');
   const [isThemeUnlocked, setIsThemeUnlocked] = useState(false);
   // Value user types into input
@@ -184,7 +183,8 @@ export function ChatInterface() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, model, theme_code: activeThemeCode, session_id: currentSessionId }),
+        // Send an empty model string so backend uses the default HF -> OpenRouter -> OpenAI -> Google fallback
+        body: JSON.stringify({ messages: apiMessages, model: "", theme_code: activeThemeCode, session_id: currentSessionId }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch response');
@@ -351,7 +351,6 @@ export function ChatInterface() {
               
               {/* Toolbar: Model (above textarea) */}
               <div className="flex items-center gap-2 px-3 pt-3 pb-1 border-b border-gray-50 md:border-none">
-                <ProviderSelector model={model} setModel={setModel}/>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50">
                   <div className="w-6 h-6 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center">
                     <div className="w-2.5 h-2.5 rounded-full bg-violet-600" />
