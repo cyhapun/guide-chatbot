@@ -115,16 +115,26 @@ def get_llm(model_name: str) -> BaseChatModel:
     - GOOGLE:gemini-2.0-flash
     - OPENAI:gpt-4o-mini
     - OPENROUTER:openai/gpt-4o-mini
+
+    When `model_name` does NOT include a provider prefix, attempt providers in this order:
+    1) Hugging Face (repo id == model_name)
+    2) OpenRouter
+    3) OpenAI
+    4) Google
+
+    If all providers fail, raise a ValueError with a user-facing hint telling the user
+    to try again later or open a ticket at the support link.
     """
+
     temperature = 0.26
 
-    if ":" not in model_name:
+    # Helper: try Hugging Face
+    def _try_hf(repo_id: str):
         hf_token = os.getenv("HUGGINGFACE_API_KEY")
         if not hf_token:
-            raise ValueError("HUGGINGFACE_API_KEY not found. Please configure it in the .env file.")
-
+            raise ValueError("HUGGINGFACE_API_KEY not found")
         llm = HuggingFaceEndpoint(
-            repo_id=model_name,
+            repo_id=repo_id,
             task="text-generation",
             max_new_tokens=1500,
             temperature=temperature,
@@ -135,57 +145,13 @@ def get_llm(model_name: str) -> BaseChatModel:
         )
         return ChatHuggingFace(llm=llm)
 
-    provider, real_model = model_name.split(":", 1)
-    provider = provider.strip().upper()
-    real_model = real_model.strip()
-
-    if not real_model:
-        raise ValueError("Invalid model. Format: <PROVIDER>:<MODEL_ID>.")
-
-    if provider == "HUGGINGFACE":
-        hf_token = os.getenv("HUGGINGFACE_API_KEY")
-        if not hf_token:
-            raise ValueError("HUGGINGFACE_API_KEY not found. Please configure it in the .env file.")
-        llm = HuggingFaceEndpoint(
-            repo_id=real_model,
-            task="text-generation",
-            max_new_tokens=1500,
-            temperature=temperature,
-            huggingfacehub_api_token=hf_token,
-            do_sample=True,
-            repetition_penalty=1.1,
-            timeout=300,
-        )
-        return ChatHuggingFace(llm=llm)
-
-    if provider == "GOOGLE":
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found in .env.")
-        return ChatGoogleGenerativeAI(
-            model=real_model,
-            google_api_key=api_key,
-            temperature=temperature,
-            timeout=300,
-        )
-
-    if provider == "OPENAI":
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY not found in .env.")
-        return ChatOpenAI(
-            model=real_model,
-            api_key=api_key,
-            temperature=temperature,
-            timeout=300,
-        )
-
-    if provider == "OPENROUTER":
+    # Helper: try OpenRouter via ChatOpenAI wrapper
+    def _try_openrouter(model_id: str):
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY not found in .env.")
+            raise ValueError("OPENROUTER_API_KEY not found")
         return ChatOpenAI(
-            model=real_model,
+            model=model_id,
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=temperature,
@@ -195,6 +161,94 @@ def get_llm(model_name: str) -> BaseChatModel:
                 "X-Title": "Theme Docs Chatbot",
             },
         )
+
+    # Helper: try OpenAI
+    def _try_openai(model_id: str):
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not found")
+        return ChatOpenAI(
+            model=model_id,
+            api_key=api_key,
+            temperature=temperature,
+            timeout=300,
+        )
+
+    # Helper: try Google
+    def _try_google(model_id: str):
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY not found")
+        return ChatGoogleGenerativeAI(
+            model=model_id,
+            google_api_key=api_key,
+            temperature=temperature,
+            timeout=300,
+        )
+
+    # If no provider prefix: try HF -> OpenRouter -> OpenAI -> Google
+    if ":" not in model_name:
+        # 1) Hugging Face (use model_name as repo id)
+        try:
+            return _try_hf(model_name)
+        except Exception as exc:
+            print(f"[get_llm] HuggingFace init failed: {exc}")
+
+        # 2) OpenRouter (use env fallback or sensible default)
+        or_model = os.getenv("OPENROUTER_FALLBACK_MODEL", "openrouter/free")
+        try:
+            return _try_openrouter(or_model)
+        except Exception as exc:
+            print(f"[get_llm] OpenRouter init failed: {exc}")
+
+        # 3) OpenAI
+        oa_model = os.getenv("OPENAI_FALLBACK_MODEL", "gpt-4o-mini")
+        try:
+            return _try_openai(oa_model)
+        except Exception as exc:
+            print(f"[get_llm] OpenAI init failed: {exc}")
+
+        # 4) Google
+        gg_model = os.getenv("GOOGLE_FALLBACK_MODEL", "gemini-2.5-flash")
+        try:
+            return _try_google(gg_model)
+        except Exception as exc:
+            print(f"[get_llm] Google init failed: {exc}")
+
+        # All providers failed
+        raise ValueError("The system is currently experiencing issues. Please try again later or open a ticket at https://skygroup.ticksy.com/.")
+
+    # Provider-prefixed model (explicit selection) - behave as before
+    provider, real_model = model_name.split(":", 1)
+    provider = provider.strip().upper()
+    real_model = real_model.strip()
+
+    if not real_model:
+        raise ValueError("Invalid model. Format: <PROVIDER>:<MODEL_ID>.")
+
+    if provider == "HUGGINGFACE":
+        try:
+            return _try_hf(real_model)
+        except Exception:
+            raise
+
+    if provider == "OPENROUTER":
+        try:
+            return _try_openrouter(real_model)
+        except Exception:
+            raise
+
+    if provider == "OPENAI":
+        try:
+            return _try_openai(real_model)
+        except Exception:
+            raise
+
+    if provider == "GOOGLE":
+        try:
+            return _try_google(real_model)
+        except Exception:
+            raise
 
     raise ValueError(f"Provider '{provider}' is not supported.")
 
@@ -352,19 +406,27 @@ async def chat_endpoint(request: ChatRequest):
             )
             system_prompt = rendered_messages[0].content
             user_prompt = rendered_messages[-1].content
-            output_text = await generate_openrouter_response(
-                model=real_model,
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-            )
+            try:
+                output_text = await generate_openrouter_response(
+                    model=real_model,
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                )
+            except Exception as exc:
+                print(f"OpenRouter request failed: {exc}")
+                output_text = "The system is currently experiencing issues. Please try again later or open a ticket at https://skygroup.ticksy.com/."
         else:
-            llm = get_llm(request.model)
-            rag_chain = prompt | llm | StrOutputParser()
-            output_text = await rag_chain.ainvoke({
-                "context": context_text,
-                "chat_history_str": chat_history_str,
-                "question": last_message
-            })
+            try:
+                llm = get_llm(request.model)
+                rag_chain = prompt | llm | StrOutputParser()
+                output_text = await rag_chain.ainvoke({
+                    "context": context_text,
+                    "chat_history_str": chat_history_str,
+                    "question": last_message
+                })
+            except Exception as exc:
+                print(f"LLM error or fallback triggered: {exc}")
+                output_text = "The system is currently experiencing issues. Please try again later or open a ticket at https://skygroup.ticksy.com/."
 
         execution_time = time.time() - start_time
         print(f"⏱️ LLM Response Time: {execution_time:.2f}s")
