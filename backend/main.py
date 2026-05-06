@@ -266,9 +266,9 @@ Your task is to answer user questions strictly based on the provided "Documentat
 
 MANDATORY RULES:
 1. CLEAR CITATION: Always reference the documentation title or provide the reference link when explaining a solution.
-2. NO ASSUMPTION: Only answer based on the provided data. If the data does not sufficiently address the issue, politely respond with:
-   "Hiện tại tài liệu hướng dẫn chưa đề cập chi tiết đến vấn đề này. Bạn có thể mở một ticket trên support center (trung tâm hỗ trợ) của Theme-Sky để được trợ giúp nhé."
-3. TONE & LANGUAGE: Always respond in a professional, friendly, and helpful tone in Vietnamese. Use markdown (bolding, lists) to make the steps easy to read.
+2. NO ASSUMPTION: Only answer based on the provided data. If the data does not sufficiently address the issue, politely decline to answer by using the following message, TRANSLATED INTO THE SAME LANGUAGE as the user's question:
+   "Currently, the documentation does not cover this issue in detail. You can open a ticket on the Theme-Sky support center for further assistance."
+3. TONE & LANGUAGE: Detect the language used in the "NEW USER QUESTION" and respond ENTIRELY in that exact same language. Maintain a professional, friendly, and helpful tone. Use markdown (bolding, lists) to make the steps easy to read.
 4. INCLUDE IMAGES: If the Reference Data contains Markdown images (e.g., ![alt](url)), you MUST include exactly those Markdown images in your response to illustrate your instructions.
 ====================
 [1] SYSTEM-EXTRACTED DOCUMENTATION REFERENCE DATA:
@@ -279,7 +279,7 @@ MANDATORY RULES:
 {chat_history_str}
 """),
     ("human", """
-> CÂU HỎI MỚI CỦA NGƯỜI DÙNG:
+> NEW USER QUESTION:
 {question}
 """)
 ])
