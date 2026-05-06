@@ -60,8 +60,37 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
     model: str
+    # Security: backend xác thực qua theme_code thay vì tin vào client tự chọn theme.
+    theme_code: str | None = None
+    # Giữ để tương thích (nhưng backend sẽ không dùng cho quyền truy cập).
     theme: str | None = None
     # Đã bỏ category vì Docs không phân chia ngành luật
+
+
+# --- THEME CODE (DEMO) ---
+# Giả lập cơ chế “mã kích hoạt theo theme”.
+# Khi demo xong, bạn nên chuyển các giá trị này sang biến môi trường hoặc file cấu hình riêng
+# để giảm rủi ro lộ mã trong repo.
+THEME_CODE_MAP: dict[str, str] = {
+    # docs-theme-sky-com__dcare
+    "DEMO-DCARE-4F2A9C1B": "docs-theme-sky-com__dcare",
+    # docs-theme-sky-com__cozycorner
+    "DEMO-COZY-8A1C7D3E": "docs-theme-sky-com__cozycorner",
+    # docs-theme-sky-com__ecomall
+    "DEMO-ECOMALL-1B6D92A3": "docs-theme-sky-com__ecomall",
+    # docs-theme-sky-com__emall
+    "DEMO-EMALL-6C3F8E0D": "docs-theme-sky-com__emall",
+    # docs-theme-sky-com__merto
+    "DEMO-MERTO-9D2A6B1C": "docs-theme-sky-com__merto",
+    # docs-theme-sky-com__wikibook
+    "DEMO-WIKIBOOK-A7C3D0E8": "docs-theme-sky-com__wikibook",
+}
+
+ALLOWED_THEME_KEYS: set[str] = set(THEME_CODE_MAP.values())
+
+
+class ThemeUnlockRequest(BaseModel):
+    theme_code: str
 
 # --- HÀM TIỆN ÍCH ---
 def get_llm(model_name: str) -> BaseChatModel:
@@ -254,8 +283,17 @@ async def chat_endpoint(request: ChatRequest):
             
         chat_history_str = "\n\n".join(history_lines) if history_lines else "(Không có lịch sử trò chuyện)"
 
-        # 3. Truy xuất tài liệu Docs liên quan
-        retriever = get_retriever(request.theme)
+        # 3. Xác thực quyền truy cập theo theme_code
+        if not request.theme_code:
+            raise HTTPException(status_code=403, detail="Missing theme_code")
+
+        normalized_code = request.theme_code.strip()
+        resolved_theme = THEME_CODE_MAP.get(normalized_code)
+        if not resolved_theme:
+            raise HTTPException(status_code=403, detail="Invalid theme_code")
+
+        # 4. Truy xuất tài liệu Docs liên quan
+        retriever = get_retriever(resolved_theme)
         retrieved_docs = await retriever.ainvoke(last_message)
         
         # 4. Đóng gói dữ liệu (Context)
@@ -306,6 +344,20 @@ async def chat_endpoint(request: ChatRequest):
 
     except Exception as e:
         traceback.print_exc() 
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/theme/unlock")
+async def theme_unlock_endpoint(request: ThemeUnlockRequest):
+    try:
+        normalized_code = request.theme_code.strip()
+        resolved_theme = THEME_CODE_MAP.get(normalized_code)
+        if not resolved_theme:
+            raise HTTPException(status_code=403, detail="Invalid theme_code")
+
+        return {"theme": resolved_theme}
+    except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     
 # --- KHỞI CHẠY SERVER ---

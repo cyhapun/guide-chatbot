@@ -17,8 +17,12 @@ export function ChatInterface() {
   const [model, setModel] = useState('GOOGLE:gemini-2.5-flash');
   const [theme, setTheme] = useState('');
   const [isThemeUnlocked, setIsThemeUnlocked] = useState(false);
+  // Value user types into input
   const [themeCode, setThemeCode] = useState('');
+  // Theme code đã được backend xác thực (dùng để gọi /api/chat)
+  const [activeThemeCode, setActiveThemeCode] = useState<string | null>(null);
   const [themeCodeError, setThemeCodeError] = useState<string | null>(null);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
@@ -41,14 +45,27 @@ export function ChatInterface() {
     const savedSessions = localStorage.getItem('theme_docs_sessions');
     const savedMessages = localStorage.getItem('theme_docs_messages');
     const savedThemeCode = localStorage.getItem('theme_docs_theme_code');
-    if (savedThemeCode) {
-      const normalized = savedThemeCode.trim();
-      const matched = THEMES.find((t) => t.id === normalized);
-      if (matched) {
-        setTheme(matched.id);
+    
+    async function tryUnlockWithSavedCode() {
+      if (!savedThemeCode) return;
+      try {
+        const response = await fetch('/api/theme/unlock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ theme_code: savedThemeCode.trim() }),
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setTheme(data.theme);
+        setActiveThemeCode(savedThemeCode.trim());
         setIsThemeUnlocked(true);
+        setThemeCodeError(null);
+      } catch {
+        // ignore
       }
     }
+
+    void tryUnlockWithSavedCode();
 
     if (savedSessions && savedMessages) {
       const parsedSessions = JSON.parse(savedSessions);
@@ -63,24 +80,40 @@ export function ChatInterface() {
 
   const selectedTheme = THEMES.find((t) => t.id === theme);
 
-  const handleUnlockTheme = () => {
+  const handleUnlockTheme = async () => {
+    if (isUnlocking) return;
     const normalized = themeCode.trim();
     if (!normalized) {
       setThemeCodeError('Vui lòng nhập mã theme');
       return;
     }
 
-    const matched = THEMES.find((t) => t.id === normalized);
-    if (!matched) {
-      setThemeCodeError('Mã theme không hợp lệ');
-      return;
-    }
-
-    setTheme(matched.id);
-    setIsThemeUnlocked(true);
+    setIsUnlocking(true);
     setThemeCodeError(null);
-    setThemeCode('');
-    localStorage.setItem('theme_docs_theme_code', matched.id);
+    try {
+      const response = await fetch('/api/theme/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme_code: normalized }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData?.detail || 'Mã theme không hợp lệ');
+      }
+
+      const data = await response.json();
+      setTheme(data.theme);
+      setActiveThemeCode(normalized);
+      setIsThemeUnlocked(true);
+      setThemeCodeError(null);
+      setThemeCode('');
+      localStorage.setItem('theme_docs_theme_code', normalized);
+    } catch (err: any) {
+      setThemeCodeError(err?.message || 'Không thể mở chatbot với mã theme này');
+    } finally {
+      setIsUnlocking(false);
+    }
   };
 
   useEffect(() => {
@@ -124,6 +157,7 @@ export function ChatInterface() {
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!isThemeUnlocked) return;
+    if (!activeThemeCode) return;
     if (!input.trim() || isLoading || !currentSessionId) return;
 
     const userText = input.trim();
@@ -150,7 +184,7 @@ export function ChatInterface() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, model, theme }),
+        body: JSON.stringify({ messages: apiMessages, model, theme_code: activeThemeCode }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch response');
@@ -219,7 +253,7 @@ export function ChatInterface() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleUnlockTheme();
               }}
-              placeholder="Ví dụ: docs-theme-sky-com__dcare"
+              placeholder="Nhập mã theme do bạn nhận khi mua"
               className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/60"
             />
 
@@ -229,31 +263,14 @@ export function ChatInterface() {
 
             <button
               onClick={handleUnlockTheme}
+              disabled={isUnlocking}
               className="mt-4 w-full p-3 rounded-2xl text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 transition-all shadow-md active:scale-95"
             >
-              Mở chatbot
+              {isUnlocking ? 'Đang xác thực...' : 'Mở chatbot'}
             </button>
 
-            <div className="mt-4">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">
-                Mã theme hỗ trợ
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {THEMES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      setThemeCode(t.id);
-                      setThemeCodeError(null);
-                    }}
-                    className="px-3 py-1.5 rounded-full border border-gray-200 text-[12px] text-gray-700 hover:bg-gray-50 transition-colors"
-                    title={t.fullName}
-                  >
-                    {t.id}
-                  </button>
-                ))}
-              </div>
+            <div className="mt-4 text-[12px] text-gray-500">
+              Sau khi xác thực, theme tương ứng sẽ được tự động áp dụng cho chatbot của bạn.
             </div>
           </div>
         </div>
