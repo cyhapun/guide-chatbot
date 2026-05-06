@@ -78,7 +78,7 @@ def url_to_filename(url: str) -> str:
     host = (parsed.hostname or "unknown-host").replace(".", "-")
     path = (parsed.path or "/").strip("/")
     path_part = path.replace("/", "__") if path else "root"
-    return f"{host}___str_{path_part}.json"
+    return f"{host}__{path_part}.json"
 
 # Thực thi: crawl nhiều URL (mỗi URL -> 1 file JSON trong backend/data/raw)
 URLS = [
