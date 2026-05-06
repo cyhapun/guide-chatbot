@@ -53,12 +53,12 @@ def theme_faiss_index_path(theme_key: str) -> str:
 def theme_tracking_file(theme_key: str) -> str:
     return str(theme_dir(theme_key) / "embedded_files.json")
 
-# --- KIỂM TRA & KHỞI TẠO MODEL ---
+# --- CHECK & INITIALIZE MODEL ---
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 if not HF_TOKEN:
-    raise ValueError("Không tìm thấy HUGGINGFACE_API_KEY. Vui lòng kiểm tra lại file .env của bạn nhé.")
+    raise ValueError("HUGGINGFACE_API_KEY not found. Please check your .env file.")
 
-print("Dang ket noi mo hinh BAAI/bge-m3 qua Hugging Face API...")
+print("Connecting to BAAI/bge-m3 model via Hugging Face API...")
 embeddings = HuggingFaceEndpointEmbeddings(
     model="BAAI/bge-m3",
     task="feature-extraction",
@@ -71,11 +71,11 @@ VECTORSTORES: Dict[str, FAISS] = {}
 KNOWLEDGE_BASE: Dict[str, Any] = {} # Chỉ cần 1 dict duy nhất để lưu các chunk theo ID
 
 def load_knowledge_base_to_ram() -> None:
-    """Nạp toàn bộ dữ liệu JSON vào RAM để Chatbot truy xuất siêu tốc."""
+    """Load all JSON data into RAM for fast access by the chatbot."""
     global KNOWLEDGE_BASE
     json_files = glob.glob(os.path.join(JSON_DATA_PATH, "*.json"))
     
-    print(f"Dang nap {len(json_files)} file JSON vao bo nho...")
+    print(f"Loading {len(json_files)} JSON files into memory...")
     
     for file_path in json_files:
         tkey = theme_key_from_path(file_path)
@@ -95,7 +95,7 @@ def load_knowledge_base_to_ram() -> None:
                         "source": chunk.get("source", "")
                     }
                 
-    print("Nạp dữ liệu vào RAM hoàn tất!")
+    print("Loaded data into RAM.")
 
 def get_processed_files(theme_key: str) -> List[str]:
     """Đọc danh sách raw JSON đã embedding (theo từng theme)."""
@@ -147,8 +147,8 @@ def init_vector_db() -> None:
     all_json_files = glob.glob(os.path.join(JSON_DATA_PATH, "*.json"))
     if not all_json_files:
         raise FileNotFoundError(
-            f"Không tìm thấy dữ liệu JSON để embedding tại: {JSON_DATA_PATH}. "
-            f"Hãy chạy script crawl để tạo file (vd: backend/data/raw/dcare_docs.json)."
+            f"No JSON data found for embedding at: {JSON_DATA_PATH}. "
+            f"Run the crawl script to generate files (e.g., backend/data/raw/dcare_docs.json)."
         )
 
     migrate_legacy_artifacts_if_any(all_json_files)
@@ -164,7 +164,7 @@ def init_vector_db() -> None:
         # Load index if exists
         if os.path.exists(index_path):
             if tkey not in VECTORSTORES:
-                print(f"Dang tai FAISS Index cho theme '{tkey}' tu o cung...")
+                print(f"Loading FAISS Index for theme '{tkey}' from disk...")
                 VECTORSTORES[tkey] = FAISS.load_local(
                     index_path,
                     embeddings,
@@ -176,15 +176,15 @@ def init_vector_db() -> None:
             pending_tasks.append((tkey, file_path))
 
     if not pending_tasks and VECTORSTORES:
-        print(">> TAT CA CAC THEME DA DUOC EMBEDDING! He thong san sang.")
+        print(">> ALL THEMES HAVE BEEN EMBEDDED! System ready.")
         return
     if not pending_tasks and not VECTORSTORES:
         raise RuntimeError(
-            "Không tìm thấy FAISS index nào trong data/processed và cũng không có file JSON cần embedding."
+            "No FAISS index found in data/processed and no JSON files available for embedding."
         )
 
     # 3. Tiến hành nhúng (embedding) - chạy tuần tự để tránh quá tải API
-    print(f"Còn {len(pending_tasks)} theme/file cần nhúng.")
+    print(f"There are {len(pending_tasks)} theme/file(s) to embed.")
 
     BATCH_SIZE = 32
     MAX_RETRIES = 3
@@ -193,7 +193,7 @@ def init_vector_db() -> None:
         filename = os.path.basename(file_to_process)
 
         print("=" * 50)
-        print(f" BAT DAU EMBEDDING THEME: {tkey} | FILE: {filename}")
+        print(f" START EMBEDDING THEME: {tkey} | FILE: {filename}")
         print("=" * 50)
 
         splits: List[Document] = []
@@ -215,11 +215,11 @@ def init_vector_db() -> None:
                 doc = Document(page_content=chunk.get("content", ""), metadata=metadata)
                 splits.append(doc)
 
-        print(f"Số lượng chunk cần nhúng của file này: {len(splits)}")
+        print(f"Number of chunks to embed for this file: {len(splits)}")
 
         for i in range(0, len(splits), BATCH_SIZE):
             batch = splits[i : i + BATCH_SIZE]
-            print(f"  + Dang day len HuggingFace batch {i} den {i + len(batch)}...")
+            print(f"  + Uploading HuggingFace batch {i} to {i + len(batch)}...")
 
             for attempt in range(MAX_RETRIES):
                 try:
@@ -235,19 +235,19 @@ def init_vector_db() -> None:
 
                 except Exception as e:
                     print(
-                        f"    -> [Warning] Loi ket noi o lan thu {attempt + 1}/{MAX_RETRIES}: {str(e)[:100]}..."
+                        f"    -> [Warning] Connection error on attempt {attempt + 1}/{MAX_RETRIES}: {str(e)[:100]}..."
                     )
                     if attempt < MAX_RETRIES - 1:
                         wait_time = 15 * (attempt + 1)
-                        print(f"    -> Dang tam nghi {wait_time} giay de may chu phuc hoi...")
+                        print(f"    -> Sleeping {wait_time} seconds for server recovery...")
                         time.sleep(wait_time)
                     else:
-                        print(f"\n[X] THAT BAI TAI BATCH {i} SAU {MAX_RETRIES} LAN THU.")
+                        print(f"\n[X] FAILED AT BATCH {i} AFTER {MAX_RETRIES} ATTEMPTS.")
                         raise e
 
         VECTORSTORES[tkey].save_local(theme_faiss_index_path(tkey))
         mark_file_as_processed(tkey, filename)
-        print(f">> DA HOAN THANH VA LUU INDEX THEME: {tkey} | FILE: {filename}")
+        print(f">> COMPLETED AND SAVED THEME INDEX: {tkey} | FILE: {filename}")
 
 class MultiThemeRetriever:
     def __init__(self, retrievers: Dict[str, Any], k: int):
@@ -275,18 +275,18 @@ class MultiThemeRetriever:
         return merged[: self.k]
 
 def get_retriever(selected_theme: Optional[str] = None) -> Any:
-    """Tạo retriever để tìm kiếm các đoạn tài liệu liên quan."""
+    """Create a retriever to search for relevant document chunks."""
     global VECTORSTORES
     if not VECTORSTORES:
         init_vector_db()
     if not VECTORSTORES:
-        raise RuntimeError("Vector DB chưa được khởi tạo (VECTORSTORES rỗng). Vui lòng kiểm tra dữ liệu raw và processed index.")
+        raise RuntimeError("Vector DB has not been initialized (VECTORSTORES empty). Please check raw and processed index data.")
 
     # Cấu hình tìm kiếm chuẩn cho Docs (Lấy k=4 hoặc 5 là đủ cho Docs)
     search_kwargs = {"k": 6, "fetch_k": 20, "lambda_mult": 0.8}
     if selected_theme:
         if selected_theme not in VECTORSTORES:
-            raise ValueError(f"Theme '{selected_theme}' không tồn tại trong vectorstore.")
+            raise ValueError(f"Theme '{selected_theme}' does not exist in the vectorstore.")
         per_theme = {
             selected_theme: VECTORSTORES[selected_theme].as_retriever(
                 search_type="mmr", search_kwargs=search_kwargs
@@ -300,26 +300,26 @@ def get_retriever(selected_theme: Optional[str] = None) -> Any:
     return MultiThemeRetriever(per_theme, k=search_kwargs["k"])
 
 def build_context(retrieved_docs: List[Document]) -> str:
-    """Xây dựng chuỗi ngữ cảnh đơn giản từ các tài liệu tìm được."""
+    """Build a simple context string from retrieved documents."""
     context_blocks = []
     
     for i, doc in enumerate(retrieved_docs):
         chunk_id = doc.metadata.get("id")
         chunk_data = KNOWLEDGE_BASE.get(chunk_id)
         
-        # Fallback nếu RAM chưa đồng bộ, lấy trực tiếp từ metadata của vectorstore
+        # Fallback if RAM not synchronized, use metadata from the vectorstore
         title = chunk_data["title"] if chunk_data else doc.metadata.get("title", "No Title")
         source = chunk_data["source"] if chunk_data else doc.metadata.get("source", "")
         content = chunk_data["content"] if chunk_data else doc.page_content
         
-        block = f"[Tài liệu #{i+1}]\n"
-        block += f"- Tiêu đề: {title}\n"
-        block += f"- Link tham khảo: {source}\n"
-        block += f"- Nội dung: \"{content}\"\n"
+        block = f"[Document #{i+1}]\n"
+        block += f"- Title: {title}\n"
+        block += f"- Reference link: {source}\n"
+        block += f"- Content: \"{content}\"\n"
         
         context_blocks.append(block)
     
-    header = "--- THÔNG TIN HƯỚNG DẪN TỪ TÀI LIỆU ---\n"
+    header = "--- DOCUMENTATION REFERENCE DATA ---\n"
     return header + "\n\n".join(context_blocks)
 
 def format_docs_for_frontend(docs: List[Document]) -> List[Dict[str, Any]]:

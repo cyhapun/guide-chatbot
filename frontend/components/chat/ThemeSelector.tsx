@@ -54,7 +54,7 @@ export function ThemeSelector({ theme, setTheme }: ThemeSelectorProps) {
       {isOpen && (
         <div className="absolute bottom-full mb-2 left-0 md:left-auto md:right-0 w-56 bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-xl py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-50 mb-1">
-            Chọn theme
+            Select Theme
           </div>
           {THEMES.map((item) => (
             <button

@@ -4,7 +4,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // ấy Base URL từ biến môi trường
+    // Get base URL from environment variable
     let backendBaseUrl = process.env.BACKEND_URL || 'http://localhost:8000';
 
     if (backendBaseUrl.startsWith('/')) {
@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
       backendBaseUrl = `${origin}${backendBaseUrl}`;
     }
 
-    // Làm sạch URL: đảm bảo không có 2 dấu gạch chéo dư thừa (ví dụ: //chat)
+    // Clean URL: ensure there are no duplicate slashes (e.g., //chat)
     const finalUrl = `${backendBaseUrl}/chat`.replace(/([^:]\/)\/+/g, "$1");
 
-    console.log(`[Proxy] Đang gọi backend tại: ${finalUrl}`);
+    console.log(`[Proxy] Calling backend at: ${finalUrl}`);
 
     // 3. Gọi Backend Python
     const response = await fetch(finalUrl, {
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
         { 
-          error: 'Backend trả về lỗi', 
+          error: 'Backend returned an error', 
           details: errorData.detail || `Status: ${response.status}` 
         }, 
         { status: response.status }
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(
       { 
-        error: 'Lỗi kết nối Backend', 
+        error: 'Backend connection error', 
         details: error.message 
       }, 
       { status: 500 }

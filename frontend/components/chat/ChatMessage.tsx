@@ -94,13 +94,13 @@ export function ChatMessage({ message }: { message: Message }) {
               <div className="flex items-center text-gray-500 mb-2 gap-1.5">
                 <BookOpenText className="w-4 h-4 text-indigo-500" />
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">
-                  Tài liệu tham khảo
+                  References
                 </span>
               </div>
 
               <div className="rounded-2xl border border-gray-200 bg-gray-50/50 overflow-hidden">
                 {message.contextUsed.map((ctx, idx) => {
-                  const title = ctx?.metadata?.title?.trim() || `Tài liệu #${idx + 1}`;
+                  const title = ctx?.metadata?.title?.trim() || `Document #${idx + 1}`;
                   const source = ctx?.metadata?.source?.trim();
 
                   return (
@@ -128,7 +128,7 @@ export function ChatMessage({ message }: { message: Message }) {
                             </a>
                           ) : (
                             <div className="mt-0.5 text-[12px] text-gray-500">
-                              (Không có link nguồn)
+                              (No source link)
                             </div>
                           )}
                         </div>

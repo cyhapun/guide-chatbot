@@ -84,7 +84,7 @@ export function ChatInterface() {
     if (isUnlocking) return;
     const normalized = themeCode.trim();
     if (!normalized) {
-      setThemeCodeError('Vui lòng nhập mã theme');
+      setThemeCodeError('Please enter the theme code');
       return;
     }
 
@@ -99,7 +99,7 @@ export function ChatInterface() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.details || errorData?.detail || 'Mã theme không hợp lệ');
+        throw new Error(errorData?.details || errorData?.detail || 'Invalid theme code');
       }
 
       const data = await response.json();
@@ -110,7 +110,7 @@ export function ChatInterface() {
       setThemeCode('');
       localStorage.setItem('theme_docs_theme_code', normalized);
     } catch (err: any) {
-      setThemeCodeError(err?.message || 'Không thể mở chatbot với mã theme này');
+      setThemeCodeError(err?.message || 'Unable to open chatbot with this theme code');
     } finally {
       setIsUnlocking(false);
     }
@@ -133,7 +133,7 @@ export function ChatInterface() {
 
   const handleNewChat = () => {
     const newId = Date.now().toString();
-    const newSession: ChatSession = { id: newId, title: 'Cuộc trò chuyện mới', lastMessage: '', timestamp: Date.now() };
+    const newSession: ChatSession = { id: newId, title: 'New Chat', lastMessage: '', timestamp: Date.now() };
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newId);
     setMessagesBySession(prev => ({ ...prev, [newId]: [] }));
@@ -204,7 +204,7 @@ export function ChatInterface() {
       setMessagesBySession(prev => ({
         ...prev, [currentSessionId]: [...(prev[currentSessionId] || []), {
           id: (Date.now() + 1).toString(), role: 'assistant',
-          content: '⚠️ Xin lỗi, đã có lỗi kết nối đến máy chủ. Vui lòng kiểm tra lại Backend.'
+          content: '⚠️ Sorry, there was a connection error to the server. Please check the backend.'
         }]
       }));
     } finally {
@@ -220,7 +220,7 @@ export function ChatInterface() {
             <div className="w-12 h-12 border-4 border-indigo-100 rounded-full"></div>
             <div className="w-12 h-12 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
           </div>
-          <span className="text-gray-500 font-medium text-sm animate-pulse">Khởi tạo hệ thống...</span>
+          <span className="text-gray-500 font-medium text-sm animate-pulse">Initializing system...</span>
         </div>
       </div>
     );
@@ -235,9 +235,9 @@ export function ChatInterface() {
               <BookOpenText className="w-5 h-5 text-indigo-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-gray-900">Nhập mã Theme để mở chatbot</h2>
+              <h2 className="text-xl font-bold text-gray-900">Enter Theme Code to Unlock Chatbot</h2>
               <p className="text-gray-500 mt-1 text-sm">
-                Mã theme phải khớp với một trong các mã hỗ trợ dưới đây.
+                The theme code must match one of the supported codes below.
               </p>
             </div>
           </div>
@@ -253,7 +253,7 @@ export function ChatInterface() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleUnlockTheme();
               }}
-              placeholder="Nhập mã theme do bạn nhận khi mua"
+              placeholder="Enter the theme code you received"
               className="mt-2 w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50/60"
             />
 
@@ -266,11 +266,11 @@ export function ChatInterface() {
               disabled={isUnlocking}
               className="mt-4 w-full p-3 rounded-2xl text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 transition-all shadow-md active:scale-95"
             >
-              {isUnlocking ? 'Đang xác thực...' : 'Mở chatbot'}
+              {isUnlocking ? 'Verifying...' : 'Unlock Chatbot'}
             </button>
 
             <div className="mt-4 text-[12px] text-gray-500">
-              Sau khi xác thực, theme tương ứng sẽ được tự động áp dụng cho chatbot của bạn.
+              After verification, the corresponding theme will be automatically applied to your chatbot.
             </div>
           </div>
         </div>
@@ -294,11 +294,11 @@ export function ChatInterface() {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
-        {/* Header tối giản */}
+        {/* Header */}
         <div className="flex items-center justify-between bg-white/80 backdrop-blur-md z-10 absolute top-0 left-0 right-0 px-4 py-3 border-b border-gray-100/50">
           <div className="flex items-center gap-3">
             {!isSidebarOpen && (
-               <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors" title="Mở sidebar">
+              <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors" title="Open sidebar">
                   <PanelLeft className="w-5 h-5" />
                </button>
             )}
@@ -309,7 +309,7 @@ export function ChatInterface() {
           </div>
         </div>
         
-        {/* Vùng nội dung chat */}
+        {/* Chat content area */}
         <div className="flex-1 overflow-y-auto pt-16 pb-40 custom-scrollbar">
           {currentMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-4 animate-in fade-in zoom-in-95 duration-500">
@@ -318,8 +318,8 @@ export function ChatInterface() {
               </div>
               <h2 className="text-3xl font-bold text-gray-800 mb-3 tracking-tight">Theme Support</h2>
               <p className="text-gray-500 max-w-md text-lg">
-                Chuyên viên hỗ trợ kỹ thuật cho Theme. <br />
-                Trả lời dựa trên tài liệu hướng dẫn và trích nguồn rõ ràng.
+                Technical support agent for the Theme. <br />
+                Answers strictly based on the documentation and include clear citations.
               </p>
             </div>
           ) : (
@@ -349,7 +349,7 @@ export function ChatInterface() {
           <div className="max-w-3xl mx-auto relative">
             <div className="relative shadow-xl shadow-indigo-100/20 rounded-3xl bg-white border border-gray-200 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-50/50 transition-all duration-300">
               
-              {/* Toolbar: Model (Nằm trên textarea) */}
+              {/* Toolbar: Model (above textarea) */}
               <div className="flex items-center gap-2 px-3 pt-3 pb-1 border-b border-gray-50 md:border-none">
                 <ProviderSelector model={model} setModel={setModel}/>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50">
@@ -374,7 +374,7 @@ export function ChatInterface() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
                 }}
-                placeholder="Nhập câu hỏi về Theme... (Shift + Enter để xuống dòng)"
+                placeholder="Ask about the Theme... (Shift + Enter for newline)"
                 className="w-full resize-none bg-transparent pl-5 pr-14 py-3 focus:outline-none text-gray-700 leading-relaxed rounded-b-3xl text-[15px] custom-scrollbar"
                 rows={1}
                 style={{ minHeight: '52px', maxHeight: '160px' }}
@@ -390,7 +390,7 @@ export function ChatInterface() {
             </div>
             
             <p className="text-center mt-3 text-[10px] text-gray-400 font-medium md:text-[11px]">
-              AI có thể cung cấp thông tin không chính xác. Hãy luôn kiểm tra lại dữ liệu quan trọng.
+              AI may provide incorrect information. Always verify important details.
             </p>
           </div>
         </div>

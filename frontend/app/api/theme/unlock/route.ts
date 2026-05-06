@@ -4,7 +4,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Lấy Base URL backend từ env hoặc fallback localhost
+    // Get backend base URL from env or fallback to localhost
     let backendBaseUrl = process.env.BACKEND_URL || 'http://localhost:8000';
     if (backendBaseUrl.startsWith('/')) {
       const { origin } = new URL(req.url);
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
         {
-          error: 'Backend trả về lỗi',
+          error: 'Backend returned an error',
           details: errorData.detail || `Status: ${response.status}`,
         },
         { status: response.status }
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json(
       {
-        error: 'Lỗi kết nối Backend',
+        error: 'Backend connection error',
         details: error.message,
       },
       { status: 500 }

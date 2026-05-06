@@ -47,17 +47,17 @@ from rag_service import (
 # Database (conversation history)
 from db import init_db, get_or_create_conversation, add_message, get_last_message, get_history
 
-# Khởi tạo Vector DB ngay khi chạy server
+# Initialize Vector DB at startup
 try:
     init_vector_db()
 except Exception as e:
-    print(f"Lỗi khởi tạo vector database: {e}")
+    print(f"Vector DB initialization error: {e}")
 
-# Khởi tạo database (bảng lưu lịch sử chat)
+# Initialize database (chat history table)
 try:
     init_db()
 except Exception as e:
-    print(f"Lỗi khởi tạo database: {e}")
+    print(f"Database initialization error: {e}")
 
 # --- KHỞI TẠO FASTAPI APP ---
 app = FastAPI(title="Dcare Docs RAG Backend")
@@ -111,7 +111,7 @@ class ThemeUnlockRequest(BaseModel):
 # --- HÀM TIỆN ÍCH ---
 def get_llm(model_name: str) -> BaseChatModel:
     """
-    Hỗ trợ định dạng model: <PROVIDER>:<MODEL_ID>
+    Support model format: <PROVIDER>:<MODEL_ID>
     - GOOGLE:gemini-2.0-flash
     - OPENAI:gpt-4o-mini
     - OPENROUTER:openai/gpt-4o-mini
@@ -121,7 +121,7 @@ def get_llm(model_name: str) -> BaseChatModel:
     if ":" not in model_name:
         hf_token = os.getenv("HUGGINGFACE_API_KEY")
         if not hf_token:
-            raise ValueError("Không tìm thấy HUGGINGFACE_API_KEY. Vui lòng cấu hình trong file .env")
+            raise ValueError("HUGGINGFACE_API_KEY not found. Please configure it in the .env file.")
 
         llm = HuggingFaceEndpoint(
             repo_id=model_name,
@@ -140,12 +140,12 @@ def get_llm(model_name: str) -> BaseChatModel:
     real_model = real_model.strip()
 
     if not real_model:
-        raise ValueError("Model không hợp lệ. Định dạng đúng: <PROVIDER>:<MODEL_ID>.")
+        raise ValueError("Invalid model. Format: <PROVIDER>:<MODEL_ID>.")
 
     if provider == "HUGGINGFACE":
         hf_token = os.getenv("HUGGINGFACE_API_KEY")
         if not hf_token:
-            raise ValueError("Không tìm thấy HUGGINGFACE_API_KEY. Vui lòng cấu hình trong file .env")
+            raise ValueError("HUGGINGFACE_API_KEY not found. Please configure it in the .env file.")
         llm = HuggingFaceEndpoint(
             repo_id=real_model,
             task="text-generation",
@@ -161,7 +161,7 @@ def get_llm(model_name: str) -> BaseChatModel:
     if provider == "GOOGLE":
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            raise ValueError("Không tìm thấy GOOGLE_API_KEY trong file .env.")
+            raise ValueError("GOOGLE_API_KEY not found in .env.")
         return ChatGoogleGenerativeAI(
             model=real_model,
             google_api_key=api_key,
@@ -172,7 +172,7 @@ def get_llm(model_name: str) -> BaseChatModel:
     if provider == "OPENAI":
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise ValueError("Không tìm thấy OPENAI_API_KEY trong file .env.")
+            raise ValueError("OPENAI_API_KEY not found in .env.")
         return ChatOpenAI(
             model=real_model,
             api_key=api_key,
@@ -183,7 +183,7 @@ def get_llm(model_name: str) -> BaseChatModel:
     if provider == "OPENROUTER":
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            raise ValueError("Không tìm thấy OPENROUTER_API_KEY trong file .env.")
+            raise ValueError("OPENROUTER_API_KEY not found in .env.")
         return ChatOpenAI(
             model=real_model,
             api_key=api_key,
@@ -196,7 +196,7 @@ def get_llm(model_name: str) -> BaseChatModel:
             },
         )
 
-    raise ValueError(f"Provider '{provider}' chưa được hỗ trợ.")
+    raise ValueError(f"Provider '{provider}' is not supported.")
 
 def parse_provider_and_model(model_name: str) -> tuple[str | None, str]:
     """Tách provider/model từ định dạng <PROVIDER>:<MODEL_ID>."""
@@ -217,7 +217,7 @@ async def generate_openrouter_response(
     temperature: float = 0.25,
 ) -> str:
     """
-    Gọi OpenRouter với payload tối giản để tránh lỗi routing:
+    Call OpenRouter with a minimal payload to avoid routing errors:
     - model: <provider>/<model>
     - messages: [{role, content}, ...]
     """
@@ -299,7 +299,7 @@ async def chat_endpoint(request: ChatRequest):
             role_name = "🧑 USER" if msg.role == "user" else "🤖 AI"
             history_lines.append(f"{role_name}: {msg.content}")
             
-        chat_history_str = "\n\n".join(history_lines) if history_lines else "(Không có lịch sử trò chuyện)"
+        chat_history_str = "\n\n".join(history_lines) if history_lines else "(No chat history)"
 
         # 3. Xác thực quyền truy cập theo theme_code
         if not request.theme_code:
@@ -335,7 +335,7 @@ async def chat_endpoint(request: ChatRequest):
 
         # RENDER PROMPT & GHI LOG
         print("\n" + "="*60)
-        print(" CHUẨN BỊ FEED DATA CHO LLM (CONTEXT)")
+        print(" PREPARING CONTEXT FOR LLM (CONTEXT)")
         print("="*60)
         print(context_text)
         print("="*60 + "\n")
